@@ -3,7 +3,7 @@ import {
   Code2,
   Globe,
   User as UserIcon,
-  ShieldAlert,
+  ShieldAlert, Shield,
   GraduationCap,
   Sparkles,
   Gamepad2,
@@ -17,13 +17,22 @@ import {
   Bell,
   LogOut,
   Paintbrush,
-  Megaphone
+  Megaphone,
+  BookOpen,
+  Compass,
+  Cpu,
+  Trophy,
+  ShoppingBag,
+  Award,
+  ChevronDown
 } from 'lucide-react';
-import { Role, UserMode, User, Notification } from '../types';
+import { Role, UserMode, User, Notification, ContactPaymentSettings } from '../types';
 import { db } from '../firebase/config';
 import { collection, query, where, orderBy, onSnapshot, doc, updateDoc } from 'firebase/firestore';
 import { AnimatePresence, motion } from 'motion/react';
 import { useBranding } from '../context/BrandingContext';
+import { NAVIGATION_ITEMS, NavItemConfig } from '../config/navigation';
+import { getPaymentSettings, DEFAULT_CONTACT_PAYMENT_SETTINGS } from '../services/bookingService';
 
 interface HeaderProps {
   currentUser?: User | null;
@@ -68,28 +77,52 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const { settings } = useBranding();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [contactSettings, setContactSettings] = useState<ContactPaymentSettings>(DEFAULT_CONTACT_PAYMENT_SETTINGS);
 
+  useEffect(() => {
+    getPaymentSettings().then(setContactSettings).catch(console.error);
+  }, []);
+
+  // Scroll position detection for transparent-to-solid glass transition
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 20) {
+        setIsScrolled(true);
+      } else {
+        setIsScrolled(false);
+      }
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Notifications listener from Firestore
   useEffect(() => {
     if (!currentUser) {
       setNotifications([]);
       return;
     }
     const q = query(
-      collection(db, 'notifications'), 
+      collection(db, 'notifications'),
       where('recipientId', '==', currentUser.id),
       orderBy('createdAt', 'desc')
     );
-    const unsub = onSnapshot(q, (snap) => {
-      const notifs = snap.docs.map(d => ({ id: d.id, ...d.data() } as Notification));
-      setNotifications(notifs);
-    }, (err) => console.warn('Notifications snapshot error:', err));
+    const unsub = onSnapshot(
+      q,
+      (snap) => {
+        const notifs = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Notification));
+        setNotifications(notifs);
+      },
+      (err) => console.warn('Notifications snapshot error:', err)
+    );
     return () => unsub();
   }, [currentUser]);
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const unreadCount = notifications.filter((n) => !n.read).length;
 
   const markAsRead = async (id: string) => {
     try {
@@ -99,24 +132,17 @@ export const Header: React.FC<HeaderProps> = ({
     }
   };
 
-  const navLinks = [
-    { id: 'home', labelAr: 'الرئيسية', labelEn: 'Home' },
-    { id: 'roadmap', labelAr: 'خارطة الطريق 🚀', labelEn: 'Roadmap' },
-    { id: 'paths', labelAr: 'المسارات', labelEn: 'Paths' },
-    { id: 'courses', labelAr: 'الكورسات والأسعار', labelEn: 'Courses & Pricing' },
-    { id: 'media', labelAr: 'الميديا والمنشورات 🎬', labelEn: 'Media & Posts' },
-    { id: 'exams', labelAr: 'الامتحانات والتحديات 📝', labelEn: 'Exams & Quizzes' },
-    { id: 'projects', labelAr: 'مشاريعي 📁', labelEn: 'My Projects' },
-    { id: 'labs', labelAr: 'المختبرات التفاعلية', labelEn: 'Interactive Labs' },
-    { id: 'gamezone', labelAr: 'Game Zone', labelEn: 'Game Zone' },
-    { id: 'store', labelAr: 'متجر سمارتك', labelEn: 'Store' },
-    { id: 'branches', labelAr: 'الفروع', labelEn: 'Branches' },
-    { id: 'verify', labelAr: 'التحقق من الشهادات', labelEn: 'Certificates' }
-  ];
+  const isArabic = language === 'ar';
 
   return (
-    <header className="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 transition-colors shadow-sm">
-      {/* Dynamic Customizable Announcement Bar */}
+    <header
+      className={`sticky top-0 z-50 w-full transition-all duration-300 ${
+        isScrolled
+          ? 'bg-white/90 dark:bg-slate-950/90 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800/80 shadow-lg shadow-slate-950/5'
+          : 'bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800'
+      }`}
+    >
+      {/* Dynamic Announcement Banner */}
       {settings.announcementTextAr && (
         <div
           className="text-white text-xs py-1.5 px-4 text-center font-black flex items-center justify-center gap-2 shadow-inner"
@@ -128,33 +154,24 @@ export const Header: React.FC<HeaderProps> = ({
       )}
 
       {/* Top Utility Bar */}
-      <div className="bg-slate-950 text-slate-300 text-xs py-1.5 px-4 sm:px-8 flex items-center justify-between border-b border-slate-800">
+      <div className="bg-slate-950 text-slate-300 text-xs py-1.5 px-4 sm:px-8 flex items-center justify-between border-b border-slate-800/80">
         <div className="flex items-center gap-4">
-          <span className="flex items-center gap-1.5 font-medium text-red-400">
-            <Phone className="w-3.5 h-3.5" /> 01024434357
-          </span>
-          <span className="hidden md:flex items-center gap-1.5 text-slate-400">
-            <MapPin className="w-3.5 h-3.5 text-red-500" /> زيزينيا - الإسكندرية (أعلى البنك الأهلي)
+          <a
+            href={`tel:${contactSettings.supportWhatsapp || contactSettings.vodafoneCashNumber || '01024434357'}`}
+            className="flex items-center gap-1.5 font-bold text-red-400 hover:text-red-300 transition"
+          >
+            <Phone className="w-3.5 h-3.5" /> {contactSettings.supportWhatsapp || contactSettings.vodafoneCashNumber || '01024434357'}
+          </a>
+          <span className="hidden md:flex items-center gap-1.5 text-slate-400 font-medium">
+            <MapPin className="w-3.5 h-3.5 text-red-500" /> {contactSettings.centerAddress || 'زيزينيا - الإسكندرية (أعلى البنك الأهلي)'}
           </span>
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Site Customizer & Logo Upload Trigger (Restricted to Admin/Super Admin only) */}
-          {(currentUser?.role === Role.ADMIN || currentUser?.role === Role.SUPER_ADMIN) && onOpenCustomizer && (
-            <button
-              onClick={onOpenCustomizer}
-              className="flex items-center gap-1.5 px-2.5 py-0.5 rounded bg-gradient-to-r from-red-600 to-amber-500 text-white font-extrabold hover:brightness-110 transition text-[11px] cursor-pointer shadow-md"
-              title="تعديل الشعار والألوان والخطوط بالموقع"
-            >
-              <Paintbrush className="w-3.5 h-3.5 animate-pulse" />
-              <span>تعديل الشعار والألوان 🎨</span>
-            </button>
-          )}
-
-          {/* Skill Assessment trigger button */}
+          {/* AI Skill Assessment Trigger */}
           <button
             onClick={onOpenSkillAssessment}
-            className="flex items-center gap-1.5 px-2.5 py-0.5 rounded bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 border border-amber-500/30 font-bold transition text-[11px] cursor-pointer"
+            className="flex items-center gap-1.5 px-2.5 py-0.5 rounded bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 border border-amber-500/30 font-bold transition text-[11px] cursor-pointer btn-micro"
           >
             <Sparkles className="w-3 h-3 text-amber-400 animate-pulse" />
             <span>تحديد مستوى الطفل بـ AI</span>
@@ -163,7 +180,7 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Mode Switcher: Kids vs Adult */}
           <button
             onClick={onToggleUserMode}
-            className={`px-2.5 py-0.5 rounded font-bold transition text-[11px] flex items-center gap-1 cursor-pointer ${
+            className={`px-2.5 py-0.5 rounded font-bold transition text-[11px] flex items-center gap-1 cursor-pointer btn-micro ${
               userMode === 'KIDS'
                 ? 'bg-gradient-to-r from-red-600 to-amber-500 text-white shadow'
                 : 'bg-slate-800 text-slate-200 hover:bg-slate-700'
@@ -185,38 +202,45 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               onClick={toggleTheme}
               className="flex items-center gap-1 hover:text-white transition font-semibold text-[11px] cursor-pointer"
+              title="تبديل المظهر (فاتح / داكن)"
             >
               {theme === 'dark' ? (
                 <>
                   <Sun className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Light</span>
+                  <span className="hidden sm:inline">Light</span>
                 </>
               ) : (
                 <>
                   <Moon className="w-3.5 h-3.5 text-blue-300" />
-                  <span>Dark</span>
+                  <span className="hidden sm:inline">Dark</span>
                 </>
               )}
             </button>
           )}
 
-          {/* Language Toggle */}
+          {/* Language Switcher */}
           <button
-            onClick={() => setLanguage(language === 'ar' ? 'en' : 'ar')}
+            onClick={() => setLanguage(isArabic ? 'en' : 'ar')}
             className="flex items-center gap-1 hover:text-white transition font-semibold text-[11px] cursor-pointer"
           >
             <Globe className="w-3.5 h-3.5" />
-            <span>{language === 'ar' ? 'English' : 'العربية'}</span>
+            <span>{isArabic ? 'English' : 'العربية'}</span>
           </button>
         </div>
       </div>
 
-      {/* Main Navigation Bar */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
-        {/* Dynamic Logo Section */}
+      {/* Main Full-Width Navbar Container */}
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-4">
+        {/* Logo Section */}
         <div
-          onClick={() => setActiveTab('home')}
+          onClick={() => {
+            setActiveTab('home');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
           className="flex items-center gap-3 cursor-pointer group"
+          role="button"
+          tabIndex={0}
+          aria-label="SmartTech Home"
         >
           {settings.logoUrl ? (
             <img
@@ -227,14 +251,14 @@ export const Header: React.FC<HeaderProps> = ({
             />
           ) : (
             <>
-              <div className="w-10 h-10 bg-red-600 rounded-lg flex items-center justify-center shadow-md shadow-red-600/30 group-hover:scale-105 transition-transform">
-                <div className="w-5 h-5 border-4 border-white rounded-full border-t-transparent"></div>
+              <div className="w-10 h-10 bg-gradient-to-tr from-red-600 via-amber-600 to-red-500 rounded-xl flex items-center justify-center shadow-md shadow-red-600/30 group-hover:scale-105 transition-transform">
+                <Code2 className="w-6 h-6 text-white" />
               </div>
               <div className="flex flex-col">
-                <span className="text-xl font-black tracking-tighter text-slate-950 dark:text-white uppercase leading-none">
+                <span className="text-xl font-black tracking-tighter text-slate-950 dark:text-white uppercase leading-none group-hover:text-red-600 transition-colors">
                   {settings.brandNameAr || 'SmartTech'}
                 </span>
-                <span className="text-[10px] font-bold tracking-[0.15em] text-red-600 uppercase leading-none mt-1">
+                <span className="text-[10px] font-bold tracking-[0.18em] text-red-600 uppercase leading-none mt-1">
                   {settings.brandTaglineAr || 'Academy & Labs'}
                 </span>
               </div>
@@ -242,69 +266,92 @@ export const Header: React.FC<HeaderProps> = ({
           )}
         </div>
 
-        {/* Desktop Links */}
-        <nav className="hidden lg:flex items-center gap-1 xl:gap-2">
-          {navLinks.map((link) => (
-            <button
-              key={link.id}
-              onClick={() => setActiveTab(link.id)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition cursor-pointer ${
-                activeTab === link.id
-                  ? 'text-red-600 bg-red-50 dark:bg-red-950/40 font-bold'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
-            >
-              {language === 'ar' ? link.labelAr : link.labelEn}
-            </button>
-          ))}
+        {/* Desktop Navigation Links */}
+        <nav className="hidden lg:flex items-center gap-1 xl:gap-1.5 overflow-x-auto py-1">
+          {NAVIGATION_ITEMS.map((item) => {
+            const isActive = activeTab === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => {
+                  setActiveTab(item.id);
+                  if (item.id === 'home') {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }
+                }}
+                className={`relative px-3 py-2 rounded-xl text-xs xl:text-sm font-bold transition-all duration-200 cursor-pointer whitespace-nowrap btn-micro flex items-center gap-1.5 ${
+                  isActive
+                    ? 'text-red-600 dark:text-red-400 bg-red-500/10 dark:bg-red-500/20 font-black shadow-sm'
+                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60'
+                }`}
+              >
+                <span>{isArabic ? item.labelAr : item.labelEn}</span>
+
+                {item.badgeAr && !isActive && (
+                  <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-red-600 text-white font-black animate-pulse">
+                    {isArabic ? item.badgeAr : item.badgeEn}
+                  </span>
+                )}
+
+                {/* Animated active indicator bar */}
+                {isActive && (
+                  <motion.div
+                    layoutId="activeTabUnderline"
+                    className="absolute bottom-0 left-2 right-2 h-0.5 bg-red-600 rounded-full"
+                    transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                  />
+                )}
+              </button>
+            );
+          })}
         </nav>
 
-        {/* Right Side Actions: Gamification Level & XP Badge + Role Switcher */}
-        <div className="hidden sm:flex items-center gap-3">
-          <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 rounded-full px-3 py-1.5 border border-slate-200 dark:border-slate-700">
+        {/* Right Action Bar (XP, Customer Preview, Login/Profile, CTA) */}
+        <div className="hidden sm:flex items-center gap-2.5">
+          {/* Level & XP Badge */}
+          <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 rounded-full px-3 py-1.5 border border-slate-200 dark:border-slate-700 shadow-inner">
             <div className="flex items-center gap-1">
-              <span className="text-[10px] font-bold text-slate-500 uppercase">Level</span>
+              <span className="text-[10px] font-bold text-slate-500 uppercase">Lvl</span>
               <span className="text-xs font-black text-slate-900 dark:text-white">
                 {Math.floor(xpPoints / 1000) + 1}
               </span>
             </div>
-            <div className="w-px h-3.5 bg-slate-300 dark:bg-slate-600"></div>
+            <div className="w-px h-3.5 bg-slate-300 dark:bg-slate-600" />
             <div className="flex items-center gap-1">
               <span className="text-[10px] font-bold text-slate-500 uppercase">XP</span>
               <span className="text-xs font-black text-red-600 font-mono">{xpPoints}</span>
             </div>
           </div>
 
+          {/* Customer Preview Mode Toggle */}
           {currentRole === Role.ADMIN && onTogglePreviewMode && (
             <button
               onClick={onTogglePreviewMode}
-              className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition border flex items-center gap-1.5 cursor-pointer ${
+              className={`px-2.5 py-1.5 rounded-xl text-xs font-extrabold transition border flex items-center gap-1 cursor-pointer btn-micro ${
                 isPreviewMode
-                  ? 'bg-amber-500 text-slate-950 border-amber-400'
+                  ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md'
                   : 'bg-slate-900 text-amber-300 border-slate-800 hover:bg-slate-800'
               }`}
             >
-              <span>{isPreviewMode ? 'إلغاء المعاينة' : 'معاينة كعميل 👁️'}</span>
+              <span>{isPreviewMode ? 'إلغاء المعاينة' : 'معاينة 👁️'}</span>
             </button>
           )}
 
+          {/* Auth Button or User Profile Button */}
           {currentUser ? (
             <div className="flex items-center gap-1.5">
               <button
                 onClick={() => setActiveTab('dashboard')}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-800 dark:text-slate-100 font-bold text-xs border border-slate-200 dark:border-slate-700 cursor-pointer transition"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-800 dark:text-slate-100 font-bold text-xs border border-slate-200 dark:border-slate-700 cursor-pointer transition btn-micro"
               >
                 <UserIcon className="w-3.5 h-3.5 text-emerald-500" />
-                <span className="max-w-[100px] truncate">{currentUser.name}</span>
-                <span className="text-[10px] text-amber-500 font-black px-1.5 py-0.5 rounded bg-amber-500/10">
-                  {currentUser.role === Role.SUPER_ADMIN ? 'مشرف عام' : currentUser.role === Role.ADMIN ? 'مدير' : currentUser.role === Role.COORDINATOR ? 'منسق' : currentUser.role === Role.TEACHER ? 'معلم' : currentUser.role === Role.ATTENDEE ? 'حاضر ورشة' : currentUser.role === Role.PARENT ? 'ولي أمر' : 'طالب'}
-                </span>
+                <span className="max-w-[90px] truncate">{currentUser.name}</span>
               </button>
               {onSignOut && (
                 <button
                   onClick={onSignOut}
                   title="تسجيل الخروج"
-                  className="p-2 rounded-xl bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/60 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/50 cursor-pointer transition"
+                  className="p-2 rounded-xl bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/60 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/50 cursor-pointer transition btn-micro"
                 >
                   <LogOut className="w-3.5 h-3.5" />
                 </button>
@@ -313,19 +360,19 @@ export const Header: React.FC<HeaderProps> = ({
           ) : (
             <button
               onClick={onOpenAuth}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-800 dark:text-slate-100 font-bold text-xs border border-slate-200 dark:border-slate-700 cursor-pointer transition"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-800 dark:text-slate-100 font-bold text-xs border border-slate-200 dark:border-slate-700 cursor-pointer transition btn-micro"
             >
               <UserIcon className="w-3.5 h-3.5 text-red-600" />
-              <span>تسجيل الدخول عبر Google / Gmail</span>
+              <span>{isArabic ? 'تسجيل الدخول' : 'Sign In'}</span>
             </button>
           )}
 
-          {/* Notifications Dropdown */}
+          {/* Notifications Toggle */}
           {currentUser && (
             <div className="relative">
               <button
                 onClick={() => setNotificationsOpen(!notificationsOpen)}
-                className="relative p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 transition cursor-pointer"
+                className="relative p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 transition cursor-pointer btn-micro"
               >
                 <Bell className="w-4 h-4 text-slate-700 dark:text-slate-300" />
                 {unreadCount > 0 && (
@@ -338,20 +385,20 @@ export const Header: React.FC<HeaderProps> = ({
               <AnimatePresence>
                 {notificationsOpen && (
                   <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 10 }}
-                    className="absolute left-0 mt-2 w-80 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 z-50 text-right dir-rtl overflow-hidden"
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    className="absolute left-0 mt-2 w-80 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 z-50 text-right dir-rtl overflow-hidden"
                   >
                     <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex justify-between items-center">
                       <h3 className="font-bold text-sm text-slate-900 dark:text-white">الإشعارات</h3>
                       {unreadCount > 0 && <span className="text-xs text-red-500 font-bold">{unreadCount} غير مقروء</span>}
                     </div>
-                    <div className="max-h-96 overflow-y-auto">
+                    <div className="max-h-80 overflow-y-auto">
                       {notifications.length === 0 ? (
                         <div className="p-6 text-center text-xs text-slate-500">لا توجد إشعارات حالياً.</div>
                       ) : (
-                        notifications.map(n => (
+                        notifications.map((n) => (
                           <div
                             key={n.id}
                             onClick={() => !n.read && markAsRead(n.id)}
@@ -365,9 +412,6 @@ export const Header: React.FC<HeaderProps> = ({
                               {n.title}
                             </h4>
                             <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">{n.body}</p>
-                            <div className="text-[10px] text-slate-400 mt-2">
-                              {new Date(n.createdAt).toLocaleDateString('ar-EG')} - {new Date(n.createdAt).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}
-                            </div>
                           </div>
                         ))
                       )}
@@ -378,60 +422,97 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           )}
 
+          {/* Primary CTA Button: Start Learning */}
           <button
-            onClick={() => setActiveTab('courses')}
-            className="px-4 py-2 rounded-xl bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-bold text-xs shadow-md shadow-red-600/30 transition cursor-pointer flex items-center gap-1.5"
+            onClick={() => {
+              setActiveTab('courses');
+            }}
+            className="px-4 py-2 rounded-xl bg-gradient-to-r from-red-600 via-amber-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-extrabold text-xs shadow-md shadow-red-600/30 transition cursor-pointer flex items-center gap-1.5 btn-micro border border-red-500/30"
           >
-            <span>حجز كورس الآن 🚀</span>
+            <span>{isArabic ? 'ابدأ التعلم وحجز كورس 🚀' : 'Start Learning 🚀'}</span>
           </button>
         </div>
 
-        {/* Mobile Toggle Button */}
+        {/* Mobile Menu Toggle Button */}
         <div className="lg:hidden flex items-center gap-2">
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200"
+            className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 cursor-pointer btn-micro border border-slate-200 dark:border-slate-700"
+            aria-label="Toggle Navigation Menu"
           >
             {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
         </div>
       </div>
 
-      {/* Mobile Drawer */}
-      {mobileMenuOpen && (
-        <div className="lg:hidden bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-4 space-y-3">
-          <div className="grid grid-cols-2 gap-2">
-            {navLinks.map((link) => (
+      {/* Mobile Drawer Navigation System */}
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="lg:hidden bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-b border-slate-200 dark:border-slate-800 px-4 py-6 space-y-4 shadow-2xl"
+          >
+            {/* Mobile Category Grid */}
+            <div className="grid grid-cols-2 gap-2">
+              {NAVIGATION_ITEMS.map((item, index) => {
+                const isActive = activeTab === item.id;
+                return (
+                  <motion.button
+                    key={item.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.02 }}
+                    onClick={() => {
+                      setActiveTab(item.id);
+                      setMobileMenuOpen(false);
+                      if (item.id === 'home') {
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }
+                    }}
+                    className={`p-3 rounded-2xl text-xs font-bold text-start transition-all cursor-pointer flex items-center justify-between ${
+                      isActive
+                        ? 'bg-red-600 text-white shadow-lg shadow-red-600/30 font-black scale-[1.02]'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700'
+                    }`}
+                  >
+                    <span>{isArabic ? item.labelAr : item.labelEn}</span>
+                    {item.badgeAr && !isActive && (
+                      <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-red-500 text-white font-extrabold">
+                        {isArabic ? item.badgeAr : item.badgeEn}
+                      </span>
+                    )}
+                  </motion.button>
+                );
+              })}
+            </div>
+
+            {/* Mobile CTA & Dashboard Buttons */}
+            <div className="pt-3 border-t border-slate-200 dark:border-slate-800 space-y-2">
               <button
-                key={link.id}
                 onClick={() => {
-                  setActiveTab(link.id);
+                  setActiveTab('courses');
                   setMobileMenuOpen(false);
                 }}
-                className={`px-3 py-2.5 rounded-xl text-xs font-bold text-right ${
-                  activeTab === link.id
-                    ? 'bg-red-600 text-white'
-                    : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200'
-                }`}
+                className="w-full py-3 bg-gradient-to-r from-red-600 to-amber-600 text-white font-black text-xs rounded-xl shadow-md text-center"
               >
-                {language === 'ar' ? link.labelAr : link.labelEn}
+                {isArabic ? 'ابدأ التعلم وحجز كورس الآن 🚀' : 'Start Learning & Book Course 🚀'}
               </button>
-            ))}
-          </div>
 
-          <div className="pt-2 border-t border-slate-200 dark:border-slate-800 flex flex-col gap-2">
-            <button
-              onClick={() => {
-                setActiveTab('dashboard');
-                setMobileMenuOpen(false);
-              }}
-              className="w-full py-2.5 bg-slate-900 text-white font-bold text-xs rounded-xl text-center"
-            >
-              فتح لوحة التحكم ({currentRole})
-            </button>
-          </div>
-        </div>
-      )}
+              <button
+                onClick={() => {
+                  setActiveTab('dashboard');
+                  setMobileMenuOpen(false);
+                }}
+                className="w-full py-2.5 bg-slate-900 dark:bg-slate-800 text-slate-100 font-bold text-xs rounded-xl text-center border border-slate-700"
+              >
+                {isArabic ? `فتح لوحة التحكم (${currentRole})` : `Open Dashboard (${currentRole})`}
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </header>
   );
 };

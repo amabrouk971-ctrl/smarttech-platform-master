@@ -17,6 +17,7 @@ import { AnimatedXpProgress } from '../AnimatedXpProgress';
 import { StudentQrCard } from '../StudentQrCard';
 import { BirthdayBanner } from '../BirthdayBanner';
 import { ZiziniaCheckInQrGenerator } from '../ZiziniaCheckInQrGenerator';
+import { XPProfile } from '../../types';
 
 interface KidsDashboardProps {
   xpPoints: number;
@@ -25,6 +26,7 @@ interface KidsDashboardProps {
   studentName?: string;
   studentId?: string;
   onAwardXp?: (amount: number) => void;
+  xpProfile?: XPProfile | null;
 }
 
 export const KidsDashboard: React.FC<KidsDashboardProps> = ({
@@ -33,7 +35,8 @@ export const KidsDashboard: React.FC<KidsDashboardProps> = ({
   onOpenLab,
   studentName = 'أحمد محمد',
   studentId = 'ST-2026-901',
-  onAwardXp
+  onAwardXp,
+  xpProfile
 }) => {
   const [showQrModal, setShowQrModal] = useState(false);
 
@@ -101,9 +104,11 @@ export const KidsDashboard: React.FC<KidsDashboardProps> = ({
         {/* Level Badge Card with Animated Framer Motion XP Progress */}
         <div className="bg-slate-950/90 backdrop-blur border border-white/20 p-5 rounded-2xl text-center space-y-3 z-10 shrink-0 min-w-[260px]">
           <AnimatedXpProgress
-            currentXp={xpPoints}
-            level={Math.floor(xpPoints / 1000) + 1}
-            levelTitle="طالب بطل بـ SmartTech"
+            currentXp={xpProfile ? xpProfile.totalXP : xpPoints}
+            level={xpProfile ? xpProfile.currentLevel : Math.floor(xpPoints / 1000) + 1}
+            levelTitle={xpProfile ? xpProfile.currentLevelTitle : "طالب بطل بـ SmartTech"}
+            maxXpForLevel={xpProfile && xpProfile.xpToNextLevel ? (xpProfile.totalXP + xpProfile.xpToNextLevel) : 1000}
+            percentageOverride={xpProfile?.progressPercentage}
             showDetails={true}
           />
         </div>

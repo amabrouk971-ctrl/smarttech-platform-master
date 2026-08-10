@@ -102,6 +102,7 @@ export interface ParentStudentRelationship {
 export interface AttendanceSession {
   id: string;
   courseId: string;
+  classId?: string;
   groupId?: string;
   teacherId: string;
   branchId?: string;
@@ -116,14 +117,23 @@ export interface AttendanceSession {
 export interface AttendanceRecord {
   id: string;
   studentId: string;
-  sessionId: string;
+  studentName?: string;
+  sessionId?: string;
   courseId: string;
+  courseName?: string;
+  classId?: string;
+  className?: string;
   groupId?: string;
-  teacherId: string;
+  teacherId?: string;
+  scannerUserId?: string;
+  scannerUserName?: string;
+  checkInTime?: string;
   status: 'PRESENT' | 'LATE' | 'ABSENT' | 'EXCUSED';
   method: 'QR' | 'MANUAL';
-  timestamp: string;
-  recordedBy: string;
+  device?: string;
+  timestamp?: string;
+  recordedBy?: string;
+  createdAt?: string;
 }
 
 export interface ConcentrationRecord {
@@ -186,6 +196,11 @@ export interface User {
   email: string;
   role: Role;
   mode: UserMode;
+  status?: 'ACTIVE' | 'EMAIL_VERIFICATION_PENDING' | 'DISABLED' | 'SUSPENDED' | 'PENDING_APPROVAL' | 'REJECTED';
+  emailVerified?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+  lastLoginAt?: string;
   approvalStatus?: ApprovalStatus;
   avatar?: string;
   age?: number;
@@ -222,23 +237,98 @@ export interface LearningPathStage {
   projectOutcomeAr?: string;
 }
 
+export type PathCourseRole = 'REQUIRED' | 'RECOMMENDED' | 'OPTIONAL' | 'ADVANCED' | 'ELECTIVE';
+
+export interface PathCourseSequenceItem {
+  courseId: string;
+  stepNumber: number;
+  role: PathCourseRole;
+  reasonAr?: string;
+  reasonEn?: string;
+  prerequisiteCourseIds?: string[];
+}
+
 export interface LearningPath {
   id: string;
   titleAr: string;
   titleEn: string;
+  slug?: string;
   ageRange: string;
+  targetAgeMin?: number;
+  targetAgeMax?: number;
   descriptionAr: string;
   descriptionEn: string;
   color: string;
   iconName: string;
   image?: string;
+  category?: string;
+  interests?: string[];
+  difficulty?: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
   personalityType?: 'assembly_engineering' | 'gaming_programming' | 'ai_shared' | 'creative_design' | 'math_iq';
   personalityLabelAr?: string;
   stages: LearningPathStage[];
+  courseSequence?: PathCourseSequenceItem[];
+  foundationRequired?: boolean; // Default true (DIGITAL EMPLOYEE)
+  foundationCourseId?: string; // Default 'digital-employee'
+  requiredCourseIds?: string[];
+  recommendedCourseIds?: string[];
+  optionalCourseIds?: string[];
+  advancedCourseIds?: string[];
+  prerequisites?: string[];
+  nextPaths?: string[];
   targetAudienceAr: string;
   targetAudienceEn: string;
   estimatedWeeks: number;
   badgeReward: string;
+  status?: 'PUBLISHED' | 'DRAFT' | 'ARCHIVED';
+  version?: number;
+  displayOrder?: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface SpecializationInterest {
+  id: string;
+  nameAr: string;
+  nameEn: string;
+  descriptionAr?: string;
+  descriptionEn?: string;
+  iconName: string;
+  color: string;
+  categoryTag: string;
+  priority: number;
+  enabled: boolean;
+  assignedCourseIds: string[];
+  assignedPathIds: string[];
+}
+
+export interface RecommendationScoringWeights {
+  interestMatchWeight: number; // default 30
+  goalMatchWeight: number; // default 25
+  ageMatchWeight: number; // default 15
+  prerequisiteMatchWeight: number; // default 20
+  pathMatchWeight: number; // default 20
+  foundationProgressionWeight: number; // default 30
+  classAvailabilityWeight: number; // default 10
+  completedCoursePenalty: number; // default -100
+  enrolledCoursePenalty: number; // default -80
+  fullClassPenalty: number; // default -50
+}
+
+export interface RecommendationRulesConfig {
+  id: string;
+  weights: RecommendationScoringWeights;
+  updatedAt: string;
+  updatedBy?: string;
+}
+
+export interface PathValidationResult {
+  valid: boolean;
+  hasFoundation: boolean;
+  hasCircularDependency: boolean;
+  circularDependencyPath?: string[];
+  errors: string[];
+  warnings: string[];
 }
 
 export type CourseCategory =
@@ -341,10 +431,203 @@ export interface Course {
 }
 
 // ==========================================
-// TRANSACTIONS, REVENUE & ACADEMY MEMBERSHIPS
+// OFFERS & PRICING ENGINE
 // ==========================================
 
-export type PaymentStatus = 'UNPAID' | 'PENDING' | 'SUBMITTED' | 'VERIFIED' | 'PAID' | 'FAILED' | 'CANCELLED' | 'REFUNDED' | 'PARTIALLY_REFUNDED';
+export type OfferDiscountType = 'PERCENTAGE' | 'FIXED';
+export type OfferStatus = 'ACTIVE' | 'INACTIVE' | 'EXPIRED' | 'SCHEDULED';
+export type OfferTargetType = 'COURSE' | 'PATH' | 'CLASS' | 'STUDENT' | 'GROUP' | 'ALL';
+export type OfferPriorityStrategy = 'HIGHEST_DISCOUNT' | 'LOWEST_DISCOUNT' | 'PRIORITY_NUMBER' | 'FIRST_MATCHING';
+
+export interface Offer {
+  id: string;
+  name: string;
+  description: string;
+  discountType: OfferDiscountType;
+  discountValue: number;
+  originalPrice?: number;
+  discountedPrice?: number;
+  startAt: string;
+  endAt: string;
+  duration: 'ONE_DAY' | 'ONE_WEEK' | 'ONE_MONTH' | 'CUSTOM' | string;
+  status: OfferStatus;
+  targetType: OfferTargetType;
+  targetIds: string[];
+  maxUses?: number;
+  usageCount: number;
+  maxUsesPerCustomer?: number;
+  promoCode?: string;
+  bannerUrl?: string;
+  terms?: string;
+  priority: number;
+  allowStacking: boolean;
+  createdBy?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CoursePricingResult {
+  basePrice: number;
+  finalPrice: number;
+  discountAmount: number;
+  appliedOffer?: Offer;
+  allEligibleOffers: Offer[];
+  discountPercentage: number;
+  hasOffer: boolean;
+  timeRemainingMs?: number;
+}
+
+// ==========================================
+// EMAIL CAMPAIGNS & AUTOMATION
+// ==========================================
+
+export type CampaignStatus = 'DRAFT' | 'SCHEDULED' | 'SENDING' | 'SENT' | 'FAILED' | 'CANCELLED';
+export type RecipientType = 
+  | 'ALL_STAFF' 
+  | 'SELECTED_STAFF' 
+  | 'ALL_EMPLOYEES' 
+  | 'SELECTED_EMPLOYEES' 
+  | 'ALL_TEACHERS' 
+  | 'SELECTED_TEACHERS' 
+  | 'ALL_STUDENTS' 
+  | 'SELECTED_STUDENTS' 
+  | 'ALL_PARENTS' 
+  | 'SELECTED_PARENTS' 
+  | 'COURSE_STUDENTS' 
+  | 'LEARNING_PATH' 
+  | 'CLASS' 
+  | 'GROUP' 
+  | 'CUSTOM_LIST';
+
+export interface EmailCampaign {
+  id: string;
+  name: string;
+  subject: string;
+  senderName: string;
+  senderEmail: string;
+  recipientType: RecipientType;
+  targetIds?: string[];
+  customEmails?: string[];
+  templateHtml: string;
+  status: CampaignStatus;
+  scheduledAt?: string;
+  sentAt?: string;
+  recipientCount: number;
+  successCount?: number;
+  failureCount?: number;
+  createdBy?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EmailLog {
+  id: string;
+  campaignId?: string;
+  recipientEmail: string;
+  recipientName?: string;
+  subject: string;
+  status: 'SENT' | 'FAILED' | 'PENDING';
+  errorDetails?: string;
+  sentAt: string;
+}
+
+// ==========================================
+// SUPPORT CENTER & BUG REPORTING
+// ==========================================
+
+export type TicketStatus = 'OPEN' | 'IN_PROGRESS' | 'WAITING_FOR_CUSTOMER' | 'WAITING_FOR_ADMIN' | 'RESOLVED' | 'CLOSED' | 'REOPENED';
+export type TicketPriority = 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
+export type TicketCategory = 'TECHNICAL' | 'COURSE' | 'PAYMENT' | 'ACCOUNT' | 'ATTENDANCE' | 'QR_CODE' | 'VIDEO' | 'EXAM' | 'INTERACTIVE_LAB' | 'PROJECT' | 'PARENT_SUPPORT' | 'TEACHER_SUPPORT' | 'OTHER';
+
+export interface SupportTicket {
+  id: string;
+  ticketNumber: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  userPhone?: string;
+  userDob?: string;
+  userRole: string;
+  subject: string;
+  category: TicketCategory;
+  priority: TicketPriority;
+  status: TicketStatus;
+  courseId?: string;
+  courseName?: string;
+  assignedToId?: string;
+  assignedToName?: string;
+  deviceInfo?: {
+    browser?: string;
+    os?: string;
+    deviceType?: string;
+    screenSize?: string;
+    currentRoute?: string;
+  };
+  hasUnreadAdmin?: boolean;
+  hasUnreadCustomer?: boolean;
+  createdAt: string;
+  updatedAt: string;
+  resolvedAt?: string;
+  slaStatus?: 'WITHIN_SLA' | 'AT_RISK' | 'OVERDUE';
+}
+
+export interface SupportMessage {
+  id: string;
+  ticketId: string;
+  senderId: string;
+  senderName: string;
+  senderRole: string;
+  text?: string;
+  voiceUrl?: string;
+  voiceDurationSeconds?: number;
+  imageUrl?: string;
+  attachmentsUrl?: string[];
+  isInternalNote?: boolean;
+  createdAt: string;
+}
+
+export interface SupportQuickReply {
+  id: string;
+  title: string;
+  category: string;
+  messageAr: string;
+  messageEn?: string;
+  isActive: boolean;
+  createdBy?: string;
+  createdAt: string;
+}
+
+export type BugStatus = 'NEW' | 'INVESTIGATING' | 'CONFIRMED' | 'IN_DEVELOPMENT' | 'FIXED' | 'CLOSED' | 'DUPLICATE' | 'CANNOT_REPRODUCE';
+
+export interface BugReport {
+  id: string;
+  bugNumber: string;
+  title: string;
+  description: string;
+  stepsToReproduce?: string;
+  expectedResult?: string;
+  actualResult?: string;
+  screenshotUrl?: string;
+  recordingUrl?: string;
+  userId: string;
+  userName: string;
+  userEmail?: string;
+  currentRoute?: string;
+  browser?: string;
+  os?: string;
+  deviceType?: string;
+  screenSize?: string;
+  status: BugStatus;
+  assignedToId?: string;
+  assignedToName?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+
+
+
+export type PaymentStatus = 'UNPAID' | 'PENDING' | 'PENDING_PAYMENT' | 'PENDING_VERIFICATION' | 'PAY_IN_CENTER_PENDING' | 'SUBMITTED' | 'VERIFIED' | 'PAID' | 'FAILED' | 'REJECTED' | 'CANCELLED' | 'REFUNDED' | 'PARTIALLY_REFUNDED';
 
 export interface Transaction {
   id: string;
@@ -453,6 +736,7 @@ export interface Lead {
   createdByName?: string;
   status: ExtendedLeadStatus;
   priority?: LeadPriority;
+  interestLevel?: string;
   notes?: string;
   nextFollowUpAt?: string;
   lastContactAt?: string;
@@ -626,15 +910,73 @@ export interface StudentProgress {
 
 export interface Certificate {
   id: string;
-  certificateCode: string;
-  studentNameAr: string;
-  studentNameEn: string;
-  courseTitleAr: string;
-  courseTitleEn: string;
+  certificateNumber: string;
+  serialNumber: string;
+  verificationId: string;
+  studentId?: string;
+  studentName: string;
+  studentNameAr?: string;
+  studentNameEn?: string;
+  studentEmail?: string;
+  studentProfileId?: string;
+  certificateName: string;
+  courseId?: string;
+  courseCode?: string;
+  courseName: string;
+  courseTitleAr?: string;
+  courseTitleEn?: string;
+  learningPathId?: string;
+  learningPathName?: string;
+  classId?: string;
+  instructorId?: string;
+  instructorName?: string;
+  instructorNameAr?: string;
   issueDate: string;
-  instructorNameAr: string;
-  pathTitleAr: string;
-  qrUrl: string;
+  completionDate?: string;
+  startDate?: string;
+  endDate?: string;
+  result: 'Passed' | 'Failed' | 'Incomplete' | 'Withdrawn' | string;
+  score?: number | string;
+  attendancePercentage?: number;
+  status: 'DRAFT' | 'ISSUED' | 'VALID' | 'EXPIRED' | 'REVOKED' | 'SUSPENDED' | 'REPLACED' | 'PENDING_VERIFICATION';
+  certificateFilePath?: string;
+  certificateImagePath?: string;
+  qrCode?: string;
+  verificationUrl?: string;
+  templateId?: string;
+  batchId?: string;
+  replaces?: string;
+  replacedBy?: string;
+  revocationReason?: string;
+  createdAt: string;
+  createdBy?: string;
+  updatedAt?: string;
+  // Legacy aliases
+  certificateCode?: string;
+  qrUrl?: string;
+  pathTitleAr?: string;
+}
+
+export interface CertificateAuditLog {
+  id: string;
+  certificateId?: string;
+  certificateNumber?: string;
+  action: 'CREATED' | 'ISSUED' | 'UPDATED' | 'VIEWED' | 'VERIFIED' | 'DOWNLOADED' | 'REVOKED' | 'RESTORED' | 'REPLACED' | 'IMPORTED' | 'EXPORTED';
+  performedBy?: string;
+  timestamp: string;
+  details?: string;
+}
+
+export interface CertificateTemplate {
+  id: string;
+  name: string;
+  description?: string;
+  templateUrl?: string;
+  isDefault?: boolean;
+  courseId?: string;
+  learningPathId?: string;
+  qrPlacement?: { x: number; y: number; width: number; height: number };
+  createdAt: string;
 }
 
 export interface Branch {
@@ -653,19 +995,348 @@ export interface Branch {
   lng?: number;
 }
 
-export interface StoreItem {
+export type ProductType = 'REGULAR_PRODUCT' | 'SPARE_PART' | 'SMART_ACCESSORY' | 'EDUCATIONAL_COMPONENT' | 'OTHER' | string;
+
+export interface ProductCategory {
   id: string;
   nameAr: string;
-  titleAr?: string;
   nameEn: string;
+  productType: ProductType;
+  subcategories: string[];
+  description?: string;
+  createdAt?: string;
+}
+
+export interface Supplier {
+  id: string;
+  supplierId: string;
+  companyName: string;
+  contactName: string;
+  phone: string;
+  whatsapp?: string;
+  email?: string;
+  address?: string;
+  taxInfo?: string;
+  paymentTerms?: string;
+  notes?: string;
+  status: 'ACTIVE' | 'INACTIVE';
+  productsSupplied?: string[];
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface SupplierPriceRecord {
+  supplierId: string;
+  supplierName: string;
   price: number;
+  date: string;
+  poNumber?: string;
+}
+
+export interface Product {
+  id: string;
+  name: string;
+  nameAr: string;
+  nameEn?: string;
+  sku: string;
+  barcode?: string;
+  productType: ProductType;
+  category: string;
+  categoryId?: string;
+  subcategory?: string;
+  brand?: string;
+  model?: string;
+  description: string;
+  shortDescription?: string;
   originalPrice?: number;
-  descriptionAr: string;
-  descriptionEn: string;
-  image: string;
-  category: 'kits' | 'electronics' | 'robotics' | 'books';
+  sellingPrice: number;
+  price?: number; // legacy alias
+  discountPrice?: number;
+  costPrice: number;
+  profitMargin?: number;
+  stockQuantity: number;
+  minimumStock: number;
+  reservedStock?: number;
+  availableStock?: number;
+  unit?: string;
+  supplier?: string;
+  supplierId?: string;
+  storageLocation?: string;
+  warranty?: string;
+  status: 'ACTIVE' | 'INACTIVE' | 'OUT_OF_STOCK' | 'DISCONTINUED';
+  mainImagePath: string;
+  image?: string; // legacy alias
+  images?: string[];
+  specifications?: Record<string, string> | string;
+  priceHistory?: SupplierPriceRecord[];
+  notes?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: string;
+  // Legacy fields compatibility
+  titleAr?: string;
+  descriptionAr?: string;
+  descriptionEn?: string;
   categoryAr?: string;
-  inStock: boolean;
+  inStock?: boolean;
+}
+
+export type StoreItem = Product;
+
+export interface InventoryTransaction {
+  id: string;
+  productId: string;
+  productName: string;
+  sku?: string;
+  type: 'STOCK_IN' | 'STOCK_OUT' | 'ADJUSTMENT' | 'DAMAGED' | 'RETURNED' | 'SOLD' | 'RESERVED' | 'PURCHASE_RECEIVE' | 'RETURN_TO_SUPPLIER';
+  quantity: number;
+  previousStock: number;
+  newStock: number;
+  poNumber?: string;
+  supplierId?: string;
+  supplierName?: string;
+  employeeId?: string;
+  employeeName?: string;
+  reason?: string;
+  notes?: string;
+  createdAt: string;
+  createdBy?: string;
+}
+
+export interface RequestComment {
+  id: string;
+  userId: string;
+  userName: string;
+  userRole: string;
+  comment: string;
+  createdAt: string;
+}
+
+export interface PurchaseRequestItem {
+  productId: string;
+  productName: string;
+  sku?: string;
+  quantity: number;
+  estimatedUnitPrice: number;
+  estimatedSubtotal: number;
+}
+
+export interface PurchaseRequest {
+  id: string;
+  requestId: string;
+  employeeId: string;
+  employeeName: string;
+  employeeEmail?: string;
+  supplierId: string;
+  supplierName: string;
+  items: PurchaseRequestItem[];
+  totalEstimatedCost: number;
+  reason: string;
+  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
+  requiredDate: string;
+  notes?: string;
+  attachments?: string[];
+  status: 'DRAFT' | 'SUBMITTED' | 'UNDER_REVIEW' | 'APPROVED' | 'REJECTED' | 'CANCELLED' | 'CONVERTED_TO_PO';
+  adminFeedback?: string;
+  convertedPoId?: string;
+  comments?: RequestComment[];
+  createdAt: string;
+  updatedAt?: string;
+  approvedBy?: string;
+  approvedByName?: string;
+  approvedAt?: string;
+}
+
+export interface PurchaseOrderItem {
+  productId: string;
+  productName: string;
+  sku?: string;
+  quantity: number;
+  unitCost: number;
+  totalCost: number;
+  receivedQuantity: number;
+  damagedQuantity: number;
+  missingQuantity: number;
+}
+
+export interface POAuditLog {
+  id: string;
+  action: 'CREATED' | 'EDITED' | 'SUBMITTED' | 'APPROVED' | 'REJECTED' | 'SENT_TO_SUPPLIER' | 'PARTIALLY_RECEIVED' | 'RECEIVED' | 'CANCELLED' | 'CLOSED';
+  performedBy: string;
+  performedByName: string;
+  timestamp: string;
+  oldValue?: string;
+  newValue?: string;
+  reason?: string;
+}
+
+export interface PurchaseOrder {
+  id: string;
+  poNumber: string;
+  purchaseRequestId?: string;
+  supplierId: string;
+  supplierName: string;
+  createdBy: string;
+  createdByName: string;
+  approvedBy?: string;
+  approvedByName?: string;
+  orderDate: string;
+  expectedDeliveryDate: string;
+  items: PurchaseOrderItem[];
+  subtotal: number;
+  tax: number;
+  shipping: number;
+  otherCosts: number;
+  totalCost: number;
+  paymentStatus: 'UNPAID' | 'PARTIALLY_PAID' | 'PAID';
+  deliveryStatus: 'PENDING' | 'PARTIALLY_DELIVERED' | 'DELIVERED';
+  status: 'DRAFT' | 'PENDING_APPROVAL' | 'APPROVED' | 'SENT_TO_SUPPLIER' | 'PARTIALLY_RECEIVED' | 'RECEIVED' | 'CANCELLED' | 'CLOSED';
+  notes?: string;
+  attachments?: string[];
+  auditTrail?: POAuditLog[];
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface ReceivingItem {
+  productId: string;
+  productName: string;
+  sku?: string;
+  orderedQuantity: number;
+  previouslyReceivedQuantity: number;
+  currentlyReceivedQuantity: number;
+  damagedQuantity: number;
+  missingQuantity: number;
+  rejectedQuantity: number;
+  serialNumbers?: string[];
+  batchNumber?: string;
+  expirationDate?: string;
+}
+
+export interface ReceivingRecord {
+  id: string;
+  receivingNumber: string;
+  poId: string;
+  poNumber: string;
+  supplierId: string;
+  supplierName: string;
+  receivedBy: string;
+  receivedByName: string;
+  receivedDate: string;
+  items: ReceivingItem[];
+  totalItemsReceived: number;
+  invoiceNumber?: string;
+  deliveryNoteNumber?: string;
+  attachments?: string[];
+  notes?: string;
+  createdAt: string;
+}
+
+export interface PurchaseReturnItem {
+  productId: string;
+  productName: string;
+  sku?: string;
+  quantity: number;
+  unitCost: number;
+  subtotal: number;
+}
+
+export interface PurchaseReturn {
+  id: string;
+  returnNumber: string;
+  poId?: string;
+  poNumber?: string;
+  supplierId: string;
+  supplierName: string;
+  createdBy: string;
+  createdByName: string;
+  approvedBy?: string;
+  approvedByName?: string;
+  returnDate: string;
+  items: PurchaseReturnItem[];
+  totalReturnAmount: number;
+  reason: string;
+  condition: string;
+  attachments?: string[];
+  status: 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'REJECTED' | 'RETURNED' | 'CLOSED';
+  notes?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface StoreExpense {
+  id: string;
+  title: string;
+  category: string;
+  amount: number;
+  date: string;
+  recordedBy: string;
+  recordedByName?: string;
+  notes?: string;
+  attachment?: string;
+  createdAt: string;
+}
+
+export interface StockAdjustment {
+  id: string;
+  productId: string;
+  productName: string;
+  sku?: string;
+  previousStock: number;
+  newStock: number;
+  adjustmentQty: number;
+  type: 'ADD' | 'REMOVE' | 'SET';
+  reason: string;
+  performedBy: string;
+  performedByName?: string;
+  createdAt: string;
+}
+
+export interface CertificateImportBatch {
+  id: string;
+  batchId: string;
+  fileName: string;
+  uploadedBy: string;
+  uploadedByName: string;
+  uploadedAt: string;
+  totalRows: number;
+  successfulRows: number;
+  failedRows: number;
+  duplicateRows: number;
+  warningRows: number;
+  status: 'PROCESSING' | 'COMPLETED' | 'FAILED';
+  logReportUrl?: string;
+}
+
+export interface CertificateImportRow {
+  rowNumber: number;
+  rawData: Record<string, string>;
+  parsedCertificate?: Partial<Certificate>;
+  validationStatus: 'VALID' | 'WARNING' | 'ERROR' | 'DUPLICATE';
+  validationErrors: string[];
+  duplicateDetails?: string;
+}
+
+export interface StoreOrderItem {
+  productId: string;
+  productName: string;
+  price: number;
+  quantity: number;
+  mainImagePath?: string;
+}
+
+export interface StoreOrder {
+  id: string;
+  orderId: string;
+  customerId?: string;
+  customerName: string;
+  phone: string;
+  items: StoreOrderItem[];
+  totalAmount: number;
+  status: 'NEW' | 'CONTACTED' | 'CONFIRMED' | 'PREPARING' | 'READY' | 'DELIVERED' | 'CANCELLED';
+  whatsAppMessage: string;
+  createdAt: string;
+  updatedAt?: string;
 }
 
 export interface StudentProject {
@@ -813,16 +1484,6 @@ export interface Announcement {
   expiresAt?: string;
 }
 
-export interface CourseMaterial {
-  id: string;
-  titleAr: string;
-  descriptionAr?: string;
-  courseId?: string;
-  fileUrl: string;
-  fileType: 'PDF' | 'VIDEO' | 'DOC' | 'ZIP' | 'LINK';
-  target: ContentTarget;
-  createdAt: string;
-}
 
 export type SimulationType = 
   'CIRCUIT_BUILDER' | 'ARDUINO_LAB' | 'ESP32_LAB' | 'ROBOT_BUILDER' | 
@@ -960,6 +1621,18 @@ export interface PlatformVideo {
   durationSeconds?: number;
 }
 
+export interface CourseReview {
+  id: string;
+  courseId: string;
+  studentName: string;
+  studentAvatar?: string;
+  rating: number;
+  reviewText: string;
+  courseTitleAr?: string;
+  date?: string;
+  verifiedStudent?: boolean;
+}
+
 export type MediaAssetType = 'IMAGE' | 'VIDEO' | 'DOCUMENT' | 'PROMOTION' | 'GALLERY';
 
 export interface MediaAsset {
@@ -1088,20 +1761,120 @@ export interface GameItem {
 }
 
 
+export interface DiscoveryProfile {
+  targetAudience: 'MY_CHILD' | 'MYSELF' | 'ANOTHER_STUDENT';
+  childName?: string;
+  childAge: number;
+  interests: string[];
+  goals: string[];
+  updatedAt?: string;
+}
+
+export interface ChildProfileData {
+  id: string;
+  name: string;
+  age: number;
+  interests: string[];
+  goals: string[];
+  avatarUrl?: string;
+  enrolledCourseIds?: string[];
+  completedCourseIds?: string[];
+  discoveryProfile?: DiscoveryProfile;
+  createdAt?: string;
+}
+
+export interface DiscoveryQuestionOption {
+  id: string;
+  textAr: string;
+  textEn: string;
+  iconName?: string;
+  descriptionAr?: string;
+  descriptionEn?: string;
+  value: string;
+  categoryTag?: string;
+}
+
+export interface DiscoveryQuestion {
+  id: string;
+  step: number;
+  titleAr: string;
+  titleEn: string;
+  subtitleAr?: string;
+  subtitleEn?: string;
+  type: 'SINGLE' | 'MULTIPLE' | 'AGE_SLIDER';
+  options: DiscoveryQuestionOption[];
+  enabled: boolean;
+}
+
+export interface DiscoveryConfig {
+  questions: DiscoveryQuestion[];
+  recommendationRules: {
+    ageWeight: number;
+    interestWeight: number;
+    goalWeight: number;
+    availabilityBoost: number;
+  };
+  enabled: boolean;
+  updatedAt?: string;
+}
+
+export interface RecommendedCourseSequenceItem {
+  course: Course;
+  stepNumber: number;
+  reasonAr: string;
+  reasonEn: string;
+  isStartHere?: boolean;
+  availableClassesCount: number;
+  nextCourseId?: string;
+}
+
+export interface RecommendationResult {
+  recommendedInterests: string[];
+  recommendedPaths: LearningPath[];
+  recommendedCourses: Course[];
+  courseSequence: RecommendedCourseSequenceItem[];
+  matchingScoreMap: Record<string, number>;
+  selectedAge: number;
+  selectedInterests: string[];
+  selectedGoals: string[];
+  bestMatch?: RecommendedCourseSequenceItem;
+  highlyRecommended?: Course[];
+  alternativePaths?: LearningPath[];
+  optionalElectives?: Course[];
+  foundationIncluded?: boolean;
+  whyThisCourseMap?: Record<string, { ar: string; en: string }>;
+}
+
 export type PaymentMethod = 'INSTAPAY' | 'VODAFONE_CASH' | 'IN_PERSON';
-export type BookingStatus = 'NEW' | 'CONTACTED' | 'PAYMENT_PENDING' | 'PAYMENT_SUBMITTED' | 'PAYMENT_VERIFICATION' | 'PAYMENT_CONFIRMED' | 'BOOKING_CONFIRMED' | 'ENROLLED' | 'CANCELLED' | 'REJECTED';
+export type BookingStatus = 'NEW' | 'CONTACTED' | 'PAYMENT_PENDING' | 'PENDING_PAYMENT' | 'PENDING_CONFIRMATION' | 'PAYMENT_SUBMITTED' | 'PAYMENT_VERIFICATION' | 'PAYMENT_CONFIRMED' | 'BOOKING_CONFIRMED' | 'CONFIRMED' | 'ENROLLED' | 'WAITLIST' | 'CANCELLED' | 'REJECTED' | 'COMPLETED';
 
 export interface CourseBooking {
   id: string;
+  bookingId?: string;
+  customerId?: string;
   customerName: string;
   parentName: string;
   studentName: string;
-  studentDateOfBirth: string;
+  studentDateOfBirth?: string;
   phone: string;
   whatsappNumber: string;
-  email: string;
+  email?: string;
+  studentId?: string;
+  parentId?: string;
+  isParent?: boolean;
+  childName?: string;
+  childAge?: number | string;
+  childId?: string;
   courseId: string;
+  courseName?: string;
   pathId?: string;
+  classId?: string;
+  className?: string;
+  classNameSnapshot?: string;
+  courseNameSnapshot?: string;
+  startDate?: string;
+  schedule?: string;
+  attendanceMode?: 'IN_PERSON' | 'ONLINE' | string;
   priceSnapshot: number;
   discountSnapshot: number;
   finalPriceSnapshot: number;
@@ -1109,6 +1882,9 @@ export interface CourseBooking {
   paymentMethod: PaymentMethod;
   paymentStatus: PaymentStatus;
   bookingStatus: BookingStatus;
+  whatsappStatus?: 'SENT' | 'NOT_SENT' | 'PENDING';
+  assignedEmployee?: string;
+  assignedEmployeeId?: string;
   source: string;
   notes?: string;
   createdAt: string;
@@ -1116,16 +1892,671 @@ export interface CourseBooking {
   verifiedAt?: string;
   verifiedBy?: string;
   paymentProofUrl?: string;
+  reservationType?: 'GROUP' | 'PRIVATE' | 'LECTURES' | string;
+  expectedDuration?: string;
 }
 
-export interface PaymentSettings {
+export interface WhatsAppTemplates {
+  courseInquiry: string;
+  instapayPayment: string;
+  vodafoneCashPayment: string;
+  payInCenter: string;
+  bookingConfirmation: string;
+}
+
+export interface ContactPaymentSettings {
   instapayNumber: string;
+  instapayWhatsapp: string;
   vodafoneCashNumber: string;
-  whatsappNumber: string;
-  branchInformation: string;
-  instapayEnabled: boolean;
-  vodafoneCashEnabled: boolean;
-  inPersonEnabled: boolean;
-  paymentInstructions?: string;
+  vodafoneCashWhatsapp: string;
+  supportWhatsapp: string;
+  centerName: string;
+  centerAddress: string;
+  googleMapsUrl: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  businessHours: string;
+  paymentRecipientName: string;
+  paymentInstructions: string;
+  paymentConfirmationInstructions: string;
+  enableInstapay: boolean;
+  enableVodafoneCash: boolean;
+  enablePayInCenter: boolean;
+  // Aliases for backwards compatibility
+  instapayEnabled?: boolean;
+  vodafoneCashEnabled?: boolean;
+  inPersonEnabled?: boolean;
+  whatsappNumber?: string;
+  branchInformation?: string;
+  paymentInstructionsText?: string;
   paymentNotes?: string;
+  whatsappTemplates?: WhatsAppTemplates;
+  updatedAt?: string;
+}
+
+export type PaymentSettings = ContactPaymentSettings;
+
+export interface CourseUnit {
+  id: string;
+  courseId: string;
+  titleAr: string;
+  titleEn?: string;
+  order: number;
+  isVisible: boolean;
+  lessons: CourseLesson[];
+}
+
+export interface CourseLesson {
+  id: string;
+  unitId: string;
+  titleAr: string;
+  titleEn?: string;
+  type: 'LESSON' | 'ACTIVITY' | 'PROJECT' | 'ASSESSMENT';
+  order: number;
+  durationMinutes?: number;
+  content?: string;
+}
+
+export type CourseAccessStatus = 
+  | 'NOT_STARTED' 
+  | 'ACTIVE' 
+  | 'PAUSED' 
+  | 'EXPIRED' 
+  | 'COMPLETED' 
+  | 'CANCELLED' 
+  | 'SUSPENDED';
+
+export type MaterialType = 
+  | 'VIDEO' 
+  | 'PRESENTATION' 
+  | 'PDF' 
+  | 'DOCUMENT' 
+  | 'IMAGE' 
+  | 'AUDIO' 
+  | 'LINK' 
+  | 'QUIZ' 
+  | 'EXAM' 
+  | 'ASSIGNMENT' 
+  | 'PROJECT' 
+  | 'SIMULATION' 
+  | 'INTERACTIVE_LAB' 
+  | 'WORKSHEET' 
+  | 'RESOURCE' 
+  | 'OTHER';
+
+export type MaterialStatus = 'DRAFT' | 'SCHEDULED' | 'AVAILABLE' | 'LOCKED' | 'ARCHIVED';
+
+export type MaterialAvailabilityRule = 
+  | 'IMMEDIATE' 
+  | 'ON_ENROLLMENT' 
+  | 'SPECIFIC_DATE' 
+  | 'AFTER_PREVIOUS_LESSON' 
+  | 'AFTER_PREVIOUS_UNIT' 
+  | 'AFTER_PREVIOUS_EXAM' 
+  | 'PREREQUISITE' 
+  | 'MANUAL';
+
+export interface CourseMaterial {
+  id: string;
+  titleAr: string;
+  titleEn?: string;
+  descriptionAr?: string;
+  type?: MaterialType;
+  courseId?: string;
+  unitId?: string;
+  lessonId?: string;
+  url?: string;
+  fileUrl?: string;
+  fileType?: 'PDF' | 'VIDEO' | 'DOC' | 'ZIP' | 'LINK' | string;
+  target?: ContentTarget;
+  storagePath?: string;
+  thumbnail?: string;
+  mimeType?: string;
+  fileSize?: number;
+  durationMinutes?: number;
+  visibility?: 'PUBLIC' | 'STUDENT_ONLY' | 'ADMIN_ONLY';
+  status?: MaterialStatus;
+  availabilityRule?: MaterialAvailabilityRule;
+  availableFrom?: string;
+  availableUntil?: string;
+  allowDownload?: boolean;
+  studentOnly?: boolean;
+  requiresEnrollment?: boolean;
+  prerequisiteMaterialId?: string;
+  order?: number;
+  createdBy?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface EnrollmentRecord {
+  id: string;
+  studentId: string;
+  studentName?: string;
+  studentEmail?: string;
+  courseId: string;
+  courseNameAr?: string;
+  classId?: string;
+  learningPathId?: string;
+  status: CourseAccessStatus;
+  startDate?: string;
+  endDate?: string;
+  openAllMaterials: boolean;
+  allowDownload?: boolean;
+  progressPercentage?: number;
+  lastLessonId?: string;
+  lastUnitId?: string;
+  lastMaterialId?: string;
+  lastAccessedAt?: string;
+  createdBy?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface StudentMaterialAccess {
+  id: string;
+  studentId: string;
+  enrollmentId: string;
+  courseId: string;
+  materialId: string;
+  access: 'OPEN' | 'CLOSED' | 'LOCKED';
+  override?: boolean;
+  availableFrom?: string;
+  availableUntil?: string;
+  allowDownload?: boolean;
+  createdBy?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface StudentProgressRecord {
+  id: string;
+  studentId: string;
+  courseId: string;
+  unitId?: string;
+  lessonId?: string;
+  materialId: string;
+  materialType?: MaterialType;
+  completed: boolean;
+  videoLastPositionSeconds?: number;
+  videoTotalSeconds?: number;
+  presentationLastSlide?: number;
+  presentationTotalSlides?: number;
+  quizScore?: number;
+  labScore?: number;
+  completedAt?: string;
+  updatedAt: string;
+}
+
+export interface CourseClass {
+  id: string;
+  courseId: string;
+  name: string;
+  capacity: number;
+  enrolledCount: number;
+  startDate: string;
+  endDate: string;
+  registrationDeadline: string;
+  timeSlot: 'MORNING' | 'AFTERNOON' | 'EVENING' | 'CUSTOM';
+  customStartTime?: string;
+  customEndTime?: string;
+  days: string[];
+  deliveryMode: 'IN_PERSON' | 'ONLINE' | 'HYBRID';
+  branchId?: string;
+  room?: string;
+  teacherId?: string;
+  meetingLink?: string;
+  status: 'DRAFT' | 'PUBLISHED' | 'COMING_SOON' | 'OPEN_FOR_ENROLLMENT' | 'FULL' | 'WAITLIST' | 'CLOSED' | 'ARCHIVED';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface XPTransaction {
+  id: string;
+  userId: string;
+  role: Role;
+  eventType: string;
+  sourceId?: string;
+  sourceType?: string;
+  xpAmount: number;
+  description: string;
+  idempotencyKey: string;
+  createdAt: string;
+  createdBy: string;
+  metadata?: any;
+}
+
+export interface XPProfile {
+  userId: string;
+  role: Role;
+  totalXP: number;
+  currentLevelId: string;
+  currentLevel: number;
+  currentLevelTitle: string;
+  xpToNextLevel?: number;
+  progressPercentage?: number;
+  lastActivityAt: string;
+  streak: number;
+  updatedAt: string;
+}
+
+export interface GamificationLevel {
+  id: string;
+  role: Role;
+  levelNumber: number;
+  title: string;
+  minXP: number;
+  icon?: string;
+  badge?: string;
+  description?: string;
+  rewards?: string[];
+  active: boolean;
+}
+
+export interface GamificationRule {
+  id: string;
+  role: Role;
+  eventType: string;
+  xpAmount: number;
+  description: string;
+  active: boolean;
+  cooldownMinutes?: number;
+  maxDailyAwards?: number;
+}
+
+export interface EmployeeGoal {
+  id: string;
+  name: string;
+  description: string;
+  goalType: 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'QUARTERLY' | 'CUSTOM';
+  targetValue: number;
+  xpReward: number;
+  startDate: string;
+  endDate: string;
+  employeeId?: string; // Optional: specific employee
+  role?: Role; // Optional: for a specific role
+  active: boolean;
+}
+
+export interface GoalProgress {
+  id: string;
+  goalId: string;
+  employeeId: string;
+  currentValue: number;
+  completed: boolean;
+  completedAt?: string;
+  lastUpdatedAt: string;
+}
+
+// ==========================================
+// ADVANCED INTERACTIVE LABS SYSTEM TYPES
+// ==========================================
+
+export type LabType =
+  | 'QUIZ_LAB'
+  | 'INTERACTIVE_SIMULATION'
+  | 'DRAG_AND_DROP'
+  | 'MATCHING'
+  | 'ORDERING'
+  | 'MULTIPLE_CHOICE'
+  | 'MULTIPLE_ANSWER'
+  | 'TRUE_FALSE'
+  | 'FILL_IN_BLANK'
+  | 'CODE_CHALLENGE'
+  | 'DEBUGGING_CHALLENGE'
+  | 'ELECTRONICS_SIMULATION'
+  | 'ROBOTICS_SIMULATION'
+  | 'AI_PROMPT_LAB'
+  | 'AI_CHAT_LAB'
+  | 'IMAGE_GENERATION_LAB'
+  | 'BUSINESS_SIMULATION'
+  | 'DECISION_MAKING'
+  | 'DRAWING_DESIGN_LAB'
+  | 'CANVAS_LAB'
+  | 'PROJECT_BUILDER'
+  | 'FILE_UPLOAD_CHALLENGE'
+  | 'PRESENTATION_CHALLENGE'
+  | 'RESEARCH_CHALLENGE'
+  | 'OPEN_ENDED_TASK'
+  | 'TEACHER_EVALUATED_TASK'
+  | 'TIMED_CHALLENGE'
+  | 'ESCAPE_ROOM'
+  | 'GAMIFIED_MISSION'
+  | 'CUSTOM_LAB';
+
+export type LabDifficulty = 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED' | 'EXPERT';
+
+export type LabStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
+
+export interface QuestionBankItem {
+  id: string;
+  courseId?: string;
+  unitId?: string;
+  lessonId?: string;
+  type: 'MULTIPLE_CHOICE' | 'MULTIPLE_ANSWER' | 'TRUE_FALSE' | 'FILL_IN_BLANK' | 'MATCHING' | 'ORDERING' | 'CODE_VALIDATION' | 'CIRCUIT_VALIDATION';
+  questionAr: string;
+  questionEn?: string;
+  options?: { id: string; textAr: string; textEn?: string; isCorrect?: boolean; pairTargetId?: string }[];
+  correctAnswers?: string[]; // IDs or exact string
+  explanationAr?: string;
+  explanationEn?: string;
+  hintAr?: string;
+  mediaUrl?: string;
+  mediaType?: 'IMAGE' | 'VIDEO' | 'AUDIO';
+  points: number;
+  difficulty: LabDifficulty;
+  tags: string[];
+  learningObjective?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface QuestionPool {
+  id: string;
+  titleAr: string;
+  titleEn?: string;
+  courseId?: string;
+  tags: string[];
+  questionIds: string[];
+  selectCount: number; // e.g. pick 10 random questions from pool
+  difficultyDistribution?: { BEGINNER?: number; INTERMEDIATE?: number; ADVANCED?: number };
+}
+
+export interface LabAccessRule {
+  id: string;
+  labId: string;
+  courseId?: string;
+  unitId?: string;
+  lessonId?: string;
+  learningPathIds?: string[];
+  enrolledCoursesOnly?: boolean;
+  minCourseProgressPercentage?: number;
+  minPreviousLabScorePercentage?: number;
+  prerequisiteLabIds?: string[];
+  allowedRoles?: Role[];
+  allowedGroupIds?: string[];
+  allowedClassIds?: string[];
+  allowedStudentIds?: string[];
+  allowedTeacherIds?: string[];
+  sessionOnly?: boolean;
+  sessionId?: string;
+  availableFrom?: string;
+  availableUntil?: string;
+  minAge?: number;
+  maxAge?: number;
+  minAttendancePercentage?: number;
+  status: 'ACTIVE' | 'DISABLED';
+}
+
+export interface AIModelProviderConfig {
+  id: string;
+  providerName: string; // e.g. "Google Gemini", "OpenAI Proxy", "Custom API"
+  providerType: 'GEMINI' | 'OPENAI' | 'ANTHROPIC' | 'LOCAL_MODEL' | 'CUSTOM_API';
+  baseUrl?: string;
+  apiKeyEnvVar: string; // Environment variable reference
+  modelName: string; // e.g. "gemini-3.6-flash", "gpt-4o"
+  apiVersion?: string;
+  temperature: number;
+  maxTokens: number;
+  systemPrompt?: string;
+  timeoutMs?: number;
+  rateLimitPerMinute?: number;
+  rateLimitPerStudentDaily?: number;
+  enabled: boolean;
+  isDefault: boolean;
+  fallbackModelId?: string;
+  allowedCourseIds?: string[];
+  allowedLabIds?: string[];
+  allowedRoles?: Role[];
+  usageCount: number;
+  totalTokensUsed: number;
+  estimatedCostUsd: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AIPromptLabConfig {
+  systemPrompt?: string;
+  targetRole?: string;
+  targetContext?: string;
+  targetTask?: string;
+  allowedModels?: string[];
+  evaluationRubric?: {
+    criteriaAr: string;
+    weight: number;
+    descriptionAr: string;
+  }[];
+  sampleGoodPrompts?: string[];
+  expectedKeywords?: string[];
+}
+
+export interface ElectronicsLabConfig {
+  allowedComponents: ('LED' | 'RESISTOR' | 'BATTERY' | 'BUTTON' | 'POTENTIOMETER' | 'MOTOR' | 'SERVO' | 'BUZZER' | 'SENSOR_LIGHT' | 'SENSOR_DISTANCE' | 'ARDUINO_UNO' | 'ESP32' | 'BREADBOARD' | 'WIRES')[];
+  prebuiltCircuit?: {
+    components: { id: string; type: string; x: number; y: number; pins: Record<string, string>; value?: string }[];
+    wires: { fromCompId: string; fromPin: string; toCompId: string; toPin: string; color?: string }[];
+  };
+  validationTarget: {
+    requiredComponents: string[];
+    requiredConnections: { fromComp: string; fromPin: string; toComp: string; toPin: string }[];
+    pinConfigMatch?: { pin: number; mode: 'INPUT' | 'OUTPUT' | 'ANALOG'; expectedState?: string }[];
+    expectedOutputLog?: string;
+  };
+}
+
+export interface CodeLabConfig {
+  allowedLanguages: ('PYTHON' | 'JAVASCRIPT' | 'HTML_CSS' | 'CPP' | 'JAVA' | 'SCRATCH')[];
+  defaultLanguage: 'PYTHON' | 'JAVASCRIPT' | 'HTML_CSS' | 'CPP' | 'JAVA' | 'SCRATCH';
+  initialCodeTemplate: string;
+  testCases: {
+    id: string;
+    input: string;
+    expectedOutput: string;
+    isHidden: boolean;
+    points: number;
+  }[];
+  solutionCode?: string;
+}
+
+export interface BusinessLabConfig {
+  scenarioTitleAr: string;
+  scenarioDescriptionAr: string;
+  startingCapital: number;
+  monthlyExpenses: number;
+  variables: {
+    id: string;
+    nameAr: string;
+    type: 'PRICING' | 'MARKETING_BUDGET' | 'STAFF_COUNT' | 'SERVICE_QUALITY';
+    defaultValue: number;
+    min: number;
+    max: number;
+  }[];
+  simulationRules: {
+    metricNameAr: string;
+    targetValue: number;
+    formulaDescriptionAr: string;
+  }[];
+}
+
+export interface DesignLabConfig {
+  canvasWidth: number;
+  canvasHeight: number;
+  presetShapes: string[];
+  requiredElementsCount?: number;
+  allowImageUpload: boolean;
+  requiredColors?: string[];
+}
+
+export interface InteractiveLab {
+  id: string;
+  courseId: string;
+  unitId?: string;
+  lessonId?: string;
+  learningPathIds?: string[];
+  titleAr: string;
+  titleEn?: string;
+  descriptionAr: string;
+  descriptionEn?: string;
+  instructionsAr: string;
+  type: LabType;
+  difficulty: LabDifficulty;
+  timeLimitMinutes?: number;
+  maxAttempts?: number;
+  passPercentage: number;
+  xpReward: number;
+  perfectScoreXpBonus?: number;
+  prerequisiteLabIds?: string[];
+  sessionOnly?: boolean;
+  sessionId?: string;
+  mediaAssets?: { type: 'IMAGE' | 'VIDEO' | 'AUDIO' | '3D_MODEL'; url: string; titleAr?: string }[];
+  questionIds?: string[];
+  questionPoolIds?: string[];
+  randomizeQuestions?: boolean;
+  aiConfig?: AIPromptLabConfig;
+  electronicsConfig?: ElectronicsLabConfig;
+  codeConfig?: CodeLabConfig;
+  businessConfig?: BusinessLabConfig;
+  designConfig?: DesignLabConfig;
+  status: LabStatus;
+  version: number;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LabAttempt {
+  id: string;
+  labId: string;
+  studentId: string;
+  studentName: string;
+  courseId: string;
+  unitId?: string;
+  lessonId?: string;
+  attemptNumber: number;
+  scorePercentage: number;
+  passed: boolean;
+  totalPointsEarned: number;
+  maxPointsPossible: number;
+  xpEarned: number;
+  timeTakenSeconds: number;
+  answers: Record<string, any>;
+  codeSubmitted?: string;
+  circuitSubmitted?: any;
+  promptSubmitted?: string;
+  businessDecisionsSubmitted?: any;
+  drawingCanvasDataUrl?: string;
+  feedbackAr?: string;
+  evaluatorType: 'AUTOMATIC' | 'TEACHER' | 'AI_HYBRID';
+  teacherFeedbackAr?: string;
+  teacherScoreOverride?: number;
+  teacherEvaluatedAt?: string;
+  teacherId?: string;
+  completedAt: string;
+}
+
+export interface StudentLabProgress {
+  id: string;
+  studentId: string;
+  labId: string;
+  courseId: string;
+  status: 'LOCKED' | 'AVAILABLE' | 'IN_PROGRESS' | 'PASSED' | 'FAILED';
+  bestScorePercentage: number;
+  bestXpEarned: number;
+  attemptsCount: number;
+  unlockedAt?: string;
+  passedAt?: string;
+  lastAttemptAt?: string;
+}
+
+export interface LabProjectSubmission {
+  id: string;
+  labId: string;
+  title: string;
+  description: string;
+  courseId: string;
+  unitId?: string;
+  lessonId?: string;
+  studentId: string;
+  studentName: string;
+  filesUrl?: string[];
+  codeContent?: string;
+  circuitJson?: any;
+  drawingDataUrl?: string;
+  presentationSlideUrl?: string;
+  status: 'DRAFT' | 'IN_PROGRESS' | 'READY_FOR_REVIEW' | 'READY_FOR_PRESENTATION' | 'PRESENTED' | 'APPROVED' | 'NEEDS_REVISION' | 'COMPLETED';
+  presentationSessionId?: string;
+  presentationDate?: string;
+  gradeScore?: number;
+  teacherFeedbackAr?: string;
+  teacherId?: string;
+  xpEarned?: number;
+  submittedAt: string;
+  evaluatedAt?: string;
+}
+
+export interface DatabaseCollectionMeta {
+  name: string;
+  documentCount: number;
+  sizeEstimateBytes: number;
+  indexesCount: number;
+  descriptionAr: string;
+  primaryFields: string[];
+}
+
+export interface DatabaseSchemaExport {
+  version: string;
+  generatedAt: string;
+  databaseProvider: string;
+  collections: Record<string, {
+    description: string;
+    fields: { name: string; type: string; required: boolean; description?: string }[];
+    indexes: string[];
+  }>;
+}
+
+export interface SchemaMigrationDiff {
+  newCollections: string[];
+  deletedCollections: string[];
+  modifiedCollections: {
+    collectionName: string;
+    addedFields: string[];
+    removedFields: string[];
+    typeChanges: string[];
+  }[];
+  potentialBreakingChanges: string[];
+}
+
+
+export interface AuthSettings {
+  enableEmailPassword: boolean;
+  enableGoogle: boolean;
+  enablePhone: boolean;
+  requireEmailVerification: boolean;
+  allowGuestAccess: boolean;
+  allowStudentRegistration: boolean;
+  allowParentRegistration: boolean;
+  allowTeacherRegistration: boolean;
+  requireTeacherApproval: boolean;
+  requireStudentApproval: boolean;
+  requireParentApproval: boolean;
+  passwordMinLength: number;
+  passwordRequireUppercase: boolean;
+  passwordRequireLowercase: boolean;
+  passwordRequireNumber: boolean;
+  passwordRequireSpecial: boolean;
+  sessionTimeoutHours: number;
+  updatedAt?: string;
+  updatedBy?: string;
+}
+
+export interface SecurityAuditLog {
+  id: string;
+  userId: string;
+  userEmail?: string;
+  eventType: 'SIGN_IN' | 'SIGN_OUT' | 'PASSWORD_RESET_REQUEST' | 'PASSWORD_RESET_COMPLETED' | 'PASSWORD_CHANGED' | 'EMAIL_VERIFIED' | 'EMAIL_CHANGED' | 'ACCOUNT_CREATED' | 'ACCOUNT_DISABLED' | 'ACCOUNT_ENABLED' | 'ROLE_CHANGED' | 'PERMISSION_CHANGED' | 'ALL_SESSIONS_REVOKED';
+  timestamp: string;
+  actorId?: string;
+  actorRole?: string;
+  result: 'SUCCESS' | 'FAILURE';
+  metadata?: Record<string, any>;
 }

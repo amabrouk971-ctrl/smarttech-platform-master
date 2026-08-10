@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { HomePage } from "./pages/HomePage";
 import { Header } from './components/Header';
+import { ScrollProgress } from './components/navigation/ScrollProgress';
+import { BackToTop } from './components/navigation/BackToTop';
+import { Breadcrumbs } from './components/navigation/Breadcrumbs';
 
 import { LearningPathsMap } from './components/LearningPathsMap';
 import { LearningRoadmap } from './components/LearningRoadmap';
@@ -24,7 +27,10 @@ import { CertificateVerifier } from './components/CertificateVerifier';
 import { SkillAssessmentModal } from './components/SkillAssessmentModal';
 import { SmartBotWidget } from './components/SmartBotWidget';
 import { CustomerPreviewBar } from './components/CustomerPreviewBar';
-import { AuthModal } from './components/AuthModal';
+import { SignInPage } from './components/auth/SignInPage';
+import { ForgotPasswordPage } from './components/auth/ForgotPasswordPage';
+import { ResetPasswordPage } from './components/auth/ResetPasswordPage';
+import { SecurityProfilePage } from './components/auth/SecurityProfilePage';
 import { AuthGateModal } from './components/AuthGateModal';
 import { TeacherApplicationModal } from './components/TeacherApplicationModal';
 import { SiteCustomizerModal } from './components/SiteCustomizerModal';
@@ -35,7 +41,9 @@ import { StudentProjectsView } from './components/student/StudentProjectsView';
 import { FloatingXpGainToast, XpGainEvent } from './components/AnimatedXpProgress';
 import { INITIAL_COURSES, INITIAL_LEARNING_PATHS } from './data/seedData';
 import { BadgeUnlockModal, Badge } from './components/BadgeUnlockModal';
-import { Course, Role, UserMode, User } from './types';
+import { getPaymentSettings, DEFAULT_CONTACT_PAYMENT_SETTINGS } from './services/bookingService';
+import { Course, Role, UserMode, User, XPProfile, ContactPaymentSettings } from './types';
+import { getXPProfile } from './services/gamificationService';
 import { subscribeToCourses, seedAllCoursesToFirestore, updateUserProfileInFirestore } from './services/firebaseService';
 import { auth, db } from './firebase/config';
 import { onAuthStateChanged, signOut, getRedirectResult } from 'firebase/auth';
@@ -55,6 +63,11 @@ export function App() {
 
   // Site Customizer & Logo Upload Modal
   const [customizerModalOpen, setCustomizerModalOpen] = useState(false);
+  const [contactSettings, setContactSettings] = useState<ContactPaymentSettings>(DEFAULT_CONTACT_PAYMENT_SETTINGS);
+
+  useEffect(() => {
+    getPaymentSettings().then(setContactSettings).catch(console.error);
+  }, []);
 
   // Theme state
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
@@ -187,7 +200,22 @@ export function App() {
 
 
   // Gamification XP & Framer Motion XP Gain Events
-  const [xpPoints, setXpPoints] = useState<number>(1450);
+  const [xpPoints, setXpPoints] = useState<number>(0);
+  const [xpProfile, setXpProfile] = useState<XPProfile | null>(null);
+
+  useEffect(() => {
+    if (currentUser) {
+      getXPProfile(currentUser.id, currentUser.role).then(profile => {
+        if (profile) {
+          setXpProfile(profile);
+          setXpPoints(profile.totalXP);
+        }
+      });
+    } else {
+      setXpProfile(null);
+      setXpPoints(0);
+    }
+  }, [currentUser]);
   const [xpGainEvents, setXpGainEvents] = useState<XpGainEvent[]>([]);
   const [unlockedBadges, setUnlockedBadges] = useState<string[]>([
     'First Step Coder',
@@ -288,6 +316,12 @@ export function App() {
 
   return (
     <div dir={dir} className={`min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans selection:bg-red-500 selection:text-white ${isArabic ? 'dir-rtl text-right' : 'dir-ltr text-left'}`}>
+      {/* Top Scroll Progress Line */}
+      <ScrollProgress />
+
+      {/* Back To Top Floating Action Button */}
+      <BackToTop />
+
       {/* Customer Preview Mode Banner */}
       <CustomerPreviewBar
         isPreviewMode={isPreviewMode}
@@ -307,20 +341,35 @@ export function App() {
         badge={currentBadge}
       />
 
-      {/* Auth Modal for Firebase Login & Sign-Up */}
-      <AuthModal
-        isOpen={authModalOpen}
-        onClose={() => setAuthModalOpen(false)}
-        onAuthSuccess={(user) => {
-          setCurrentUser(user);
-          setCurrentRole(user.role);
-          handleAwardXp(100, 'تسجيل دخول ناجح للمنصة 🎉');
-          if (pendingTabAfterAuth) {
-            setActiveTab(pendingTabAfterAuth);
-            setPendingTabAfterAuth(null);
-          }
-        }}
-      />
+      {/* Render Authentication Pages if activeTab matches */}
+      <>
+        {activeTab === 'sign-in' && (
+          <SignInPage 
+            onSignInSuccess={() => {
+              // The onAuthStateChanged listener handles setting currentUser
+              setActiveTab(pendingTabAfterAuth || 'dashboard');
+              setPendingTabAfterAuth(null);
+            }}
+            onNavigateToForgot={() => setActiveTab('forgot-password')}
+            onNavigateToRegister={() => setActiveTab('register')} // Note: registration page would be added here
+          />
+        )}
+        
+        {activeTab === 'forgot-password' && (
+          <ForgotPasswordPage onNavigateBack={() => setActiveTab('sign-in')} />
+        )}
+
+        {activeTab === 'reset-password' && (
+          <ResetPasswordPage 
+            oobCode={new URLSearchParams(window.location.search).get('oobCode') || ''} 
+            onNavigateToSignIn={() => setActiveTab('sign-in')} 
+          />
+        )}
+
+        {activeTab === 'security' && (
+          <SecurityProfilePage onSignOut={() => setActiveTab('home')} />
+        )}
+      </>
 
       {/* Auth Gate Modal for Unauthenticated Guests */}
       <AuthGateModal
@@ -328,7 +377,7 @@ export function App() {
         onClose={() => setAuthGateModalOpen(false)}
         onOpenAuth={(preferredRole) => {
           setAuthGateModalOpen(false);
-          setAuthModalOpen(true);
+          setActiveTab('sign-in');
         }}
       />
 
@@ -355,7 +404,7 @@ export function App() {
         setLanguage={setLanguage}
         onOpenSkillAssessment={() => setSkillModalOpen(true)}
         onOpenCustomizer={() => setCustomizerModalOpen(true)}
-        onOpenAuth={() => setAuthModalOpen(true)}
+        onOpenAuth={() => setActiveTab('sign-in')}
         onSignOut={handleSignOut}
         isPreviewMode={isPreviewMode}
         onTogglePreviewMode={() => setIsPreviewMode(!isPreviewMode)}
@@ -363,6 +412,9 @@ export function App() {
         theme={theme}
         toggleTheme={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
       />
+
+      {/* Breadcrumb Trail */}
+      <Breadcrumbs activeTab={activeTab} setActiveTab={setActiveTab} />
 
       {/* Main View Router */}
       <main>
@@ -373,7 +425,7 @@ export function App() {
             onStartLearning={() => setActiveTab('courses')}
             onExplorePaths={() => setActiveTab('paths')}
             onSelectCourse={(c) => setSelectedCourseForModal(c)}
-            onOpenAuth={() => setAuthModalOpen(true)}
+            onOpenAuth={() => setActiveTab('sign-in')}
             setActiveTab={setActiveTab}
             setActiveLabId={setActiveLabId}
           />
@@ -406,7 +458,7 @@ export function App() {
             courses={courses}
             onSelectCourse={(c) => setSelectedCourseForModal(c)}
             currentUser={currentUser}
-            onOpenAuth={() => setAuthModalOpen(true)}
+            onOpenAuth={() => setActiveTab('sign-in')}
           />
         )}
 
@@ -524,7 +576,7 @@ export function App() {
           currentUser={currentUser}
           onOpenAuth={() => {
             setSelectedCourseForModal(null);
-            setAuthModalOpen(true);
+            setActiveTab('sign-in');
           }}
           onAwardXp={(amt) => handleAwardXp(amt, 'حجز وتأكيد الدورة 🎯')}
         />
@@ -534,6 +586,10 @@ export function App() {
       <SkillAssessmentModal
         isOpen={skillModalOpen}
         onClose={() => setSkillModalOpen(false)}
+        onSelectPath={(pathId) => {
+          setActiveTab('courses');
+          setSkillModalOpen(false);
+        }}
         onComplete={(recommendation) => {
           handleAwardXp(150, 'إكمال التقييم الذكي بـ AI 🌟');
         }}
@@ -573,8 +629,8 @@ export function App() {
 
           <div className="space-y-2">
             <h4 className="text-white font-bold text-sm">{t('footerContactTitle')}</h4>
-            <p>{isArabic ? '📞 الهاتف / الواتساب: 01024434357' : '📞 Phone / WhatsApp: +20 102 443 4357'}</p>
-            <p>{isArabic ? '📍 المقر الرئيسي: الإسكندرية - زيزينيا - 603 طريق الحرية (أعلى البنك الأهلي المصري - الدور الثاني)' : '📍 Headquarters: Alexandria - Zizinia - 603 El-Horreya Road (Above NBE - 2nd Floor)'}</p>
+            <p>📞 الهاتف / الواتساب: {contactSettings.supportWhatsapp || contactSettings.vodafoneCashNumber || '01024434357'}</p>
+            <p>📍 المقر الرئيسي: {contactSettings.centerAddress || 'الإسكندرية - زيزينيا - 603 طريق الحرية (أعلى البنك الأهلي المصري - الدور الثاني)'}</p>
           </div>
 
           <div className="space-y-2">

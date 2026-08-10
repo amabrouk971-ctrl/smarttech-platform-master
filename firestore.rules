@@ -1,9 +1,164 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow read/write access to all documents recursively
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isStaff() {
+      return isAuthenticated() && (
+        (request.auth.token.role in ['ADMIN', 'SUPER_ADMIN', 'TEACHER', 'COORDINATOR']) ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         getUserData().role in ['ADMIN', 'SUPER_ADMIN', 'TEACHER', 'COORDINATOR'])
+      );
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (
+        (request.auth.token.role in ['ADMIN', 'SUPER_ADMIN', 'COORDINATOR']) ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         getUserData().role in ['ADMIN', 'SUPER_ADMIN', 'COORDINATOR'])
+      );
+    }
+
+    // Users collection
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      allow update: if isOwner(userId) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Public Courses & Catalogs
+    match /courses/{courseId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Course Materials (Secured per Student Enrollment)
+    match /materials/{materialId} {
+      allow read: if isStaff() || (
+        isAuthenticated() && (
+          resource.data.visibility == 'PUBLIC' ||
+          exists(/databases/$(database)/documents/enrollments/$(request.auth.uid + '_' + resource.data.courseId))
+        )
+      );
+      allow write: if isStaff();
+    }
+
+    // Enrollments
+    match /enrollments/{enrollmentId} {
+      allow read: if isStaff() || (isAuthenticated() && resource.data.studentId == request.auth.uid);
+      allow write: if isAdmin();
+    }
+
+    // Student Material Access Overrides
+    match /studentMaterialAccess/{accessId} {
+      allow read: if isStaff() || (isAuthenticated() && resource.data.studentId == request.auth.uid);
+      allow write: if isAdmin();
+    }
+
+    // Material Audit Logs
+    match /material_audit_logs/{logId} {
+      allow read: if isStaff();
+      allow create: if isAuthenticated();
+    }
+
+    // Offers & Pricing Rules
+    match /offers/{offerId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Email Campaigns & Logs
+    match /email_campaigns/{campaignId} {
+      allow read, write: if isAdmin();
+    }
+    match /email_logs/{logId} {
+      allow read, write: if isAdmin();
+    }
+
+    // Support Center & Tickets
+    match /support_tickets/{ticketId} {
+      allow read: if isStaff() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+      allow create: if isAuthenticated();
+      allow update: if isStaff() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+      allow delete: if isAdmin();
+    }
+
+    // Bug Reports
+    match /bug_reports/{reportId} {
+      allow read: if isStaff() || (isAuthenticated() && resource.data.reporterId == request.auth.uid);
+      allow create: if isAuthenticated();
+      allow update: if isStaff();
+      allow delete: if isAdmin();
+    }
+
+    // Attendance Records
+    match /attendance_records/{recordId} {
+      allow read: if isStaff() || (isAuthenticated() && resource.data.studentId == request.auth.uid);
+      allow write: if isStaff();
+    }
+
+    // Course Bookings
+    match /courseBookings/{bookingId} {
+      allow read: if isStaff() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+      allow create: if true;
+      allow update, delete: if isStaff();
+    }
+
+    // Hardware Store Products
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+
+    // Inventory Transactions
+    match /inventoryTransactions/{transactionId} {
+      allow read: if isStaff();
+      allow write: if isStaff();
+    }
+
+    // Store WhatsApp Orders
+    match /storeOrders/{orderId} {
+      allow read: if isStaff() || (isAuthenticated() && resource.data.customerId == request.auth.uid);
+      allow create: if true;
+      allow update, delete: if isStaff();
+    }
+
+    // Official Certificates Database
+    match /certificates/{certificateId} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+
+    // Certificate Audit Trail
+    match /certificateAuditLogs/{logId} {
+      allow read: if isStaff();
+      allow create: if true;
+      allow write: if isStaff();
+    }
+
+    // Certificate Templates
+    match /certificateTemplates/{templateId} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+
+    // Default Fallback Rule
     match /{document=**} {
-      allow read, write: if true;
+      allow read: if isAuthenticated();
+      allow write: if isStaff();
     }
   }
 }

@@ -6,6 +6,7 @@ import confetti from 'canvas-confetti';
 interface AnimatedXpProgressProps {
   currentXp: number;
   maxXpForLevel?: number;
+  percentageOverride?: number;
   level: number;
   levelTitle?: string;
   showDetails?: boolean;
@@ -16,9 +17,10 @@ export const AnimatedXpProgress: React.FC<AnimatedXpProgressProps> = ({
   maxXpForLevel = 1000,
   level,
   levelTitle = 'مبرمج المستقبل المستكشف',
-  showDetails = true
+  showDetails = true,
+  percentageOverride
 }) => {
-  const percentage = Math.min(100, Math.max(0, (currentXp % maxXpForLevel) / (maxXpForLevel / 100)));
+  const percentage = percentageOverride !== undefined ? percentageOverride : Math.min(100, Math.max(0, (currentXp % maxXpForLevel) / (maxXpForLevel / 100)));
 
   return (
     <div className="space-y-3 w-full dir-rtl text-right">

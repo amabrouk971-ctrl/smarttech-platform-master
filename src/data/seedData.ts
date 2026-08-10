@@ -1015,7 +1015,7 @@ export const INITIAL_BRANCHES: Branch[] = [
   }
 ];
 
-export const INITIAL_STORE_ITEMS: StoreItem[] = [
+export const INITIAL_STORE_ITEMS: any[] = [
   {
     id: 'st-1',
     nameAr: 'حقيبة مكونات الإلكترونيات والأردوينو الشاملة (Arduino Ultimate Starter Kit)',
@@ -1090,7 +1090,7 @@ export const INITIAL_PROJECTS: StudentProject[] = [
   }
 ];
 
-export const INITIAL_CERTIFICATES: Certificate[] = [
+export const INITIAL_CERTIFICATES: any[] = [
   {
     id: 'cert-001',
     certificateCode: 'CERT-SMART-2026-8891',

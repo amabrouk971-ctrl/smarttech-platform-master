@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { getPaymentSettings } from '../services/bookingService';
 import { APIProvider, Map, AdvancedMarker, Pin, InfoWindow, useMap } from '@vis.gl/react-google-maps';
 import { Building2, Phone, Navigation, Move3d, RotateCw, Compass, Eye, Layers, ShieldCheck } from 'lucide-react';
 
@@ -44,8 +45,8 @@ export const ThreeDMap: React.FC<ThreeDMapProps> = ({
   centerLat = 31.2401598,
   centerLng = 29.9635953,
   zoomLevel = 18,
-  titleAr = 'سمارتك للتدريب المتطور — المقر الرئيسي والسنتر التدريبي المعملي',
-  phoneNumbers = ['01024434357', '01227811948']
+  titleAr,
+  phoneNumbers
 }) => {
   const [center, setCenter] = useState({ lat: centerLat, lng: centerLng });
   const [zoom, setZoom] = useState(zoomLevel);
@@ -54,6 +55,22 @@ export const ThreeDMap: React.FC<ThreeDMapProps> = ({
   const [mapTypeId, setMapTypeId] = useState('hybrid'); // 3D Satellite Hybrid view
   const [isOrbiting, setIsOrbiting] = useState(false);
   const [infoOpen, setInfoOpen] = useState(true);
+  const [dynamicPhones, setDynamicPhones] = useState<string[]>(phoneNumbers || ['01024434357', '01227811948']);
+  const [dynamicTitle, setDynamicTitle] = useState<string>(titleAr || 'سمارتك للتدريب المتطور — المقر الرئيسي والسنتر التدريبي المعملي');
+
+  useEffect(() => {
+    getPaymentSettings().then(s => {
+      if (!phoneNumbers) {
+        setDynamicPhones([s.vodafoneCashNumber, s.instapayNumber].filter(Boolean));
+      }
+      if (!titleAr && s.centerName) {
+        setDynamicTitle(s.centerName);
+      }
+      if (s.latitude && s.longitude) {
+        setCenter({ lat: s.latitude, lng: s.longitude });
+      }
+    }).catch(console.error);
+  }, [phoneNumbers, titleAr]);
 
   // 360 degree 3D flyover rotation loop
   useEffect(() => {
@@ -160,7 +177,7 @@ export const ThreeDMap: React.FC<ThreeDMapProps> = ({
                     </p>
                     <div className="pt-2 border-t border-slate-200 space-y-1">
                       <div className="text-[11px] font-bold text-emerald-700 flex items-center gap-1">
-                        <Phone className="w-3 h-3" /> {phoneNumbers.join(' - ')}
+                        <Phone className="w-3 h-3" /> {dynamicPhones.join(' - ')}
                       </div>
                       <a
                         href="https://www.google.com/maps/place/%D8%B3%D9%85%D8%A7%D8%B1%D8%AA%D9%83+%D9%84%D9%84%D8%AA%D8%AF%D8%B1%D9%8A%D8%A8+%D8%A7%D9%84%D9%8AA%D8%AA%D8%B7%D9%88%D8%B1%E2%80%AD%E2%80%AD/@31.2401598,29.9635953,17z/data=!4m2!3m1!1s0x14f5c513a27e37ed:0xee5386b29ced202e"
@@ -201,7 +218,7 @@ export const ThreeDMap: React.FC<ThreeDMapProps> = ({
 
               <div className="p-2.5 bg-slate-900 rounded-xl border border-slate-800 text-xs text-emerald-400 font-bold flex items-center justify-center gap-2">
                 <Phone className="w-4 h-4" />
-                <span>هاتف: {phoneNumbers.join(' - ')}</span>
+                <span>هاتف: {dynamicPhones.join(' - ')}</span>
               </div>
 
               <a

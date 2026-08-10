@@ -27,6 +27,8 @@ export const MaterialCMS: React.FC = () => {
       descriptionAr: desc,
       fileUrl,
       fileType,
+      type: 'PDF',
+      status: 'AVAILABLE',
       target: { type: 'EVERYONE' },
       createdAt: new Date().toISOString()
     };

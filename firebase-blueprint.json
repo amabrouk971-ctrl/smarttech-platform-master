@@ -151,6 +151,74 @@
       },
       "required": ["titleAr"]
     },
+    "products": {
+      "title": "products",
+      "description": "SmartTech Hardware Store products catalogue",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "nameAr": { "type": "string" },
+        "sku": { "type": "string" },
+        "sellingPrice": { "type": "number" },
+        "costPrice": { "type": "number" },
+        "stockQuantity": { "type": "number" },
+        "category": { "type": "string" }
+      },
+      "required": ["nameAr", "sku", "sellingPrice"]
+    },
+    "inventoryTransactions": {
+      "title": "inventoryTransactions",
+      "description": "Store inventory movements and adjustments",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "productId": { "type": "string" },
+        "type": { "type": "string" },
+        "quantity": { "type": "number" }
+      },
+      "required": ["productId", "type", "quantity"]
+    },
+    "storeOrders": {
+      "title": "storeOrders",
+      "description": "Store customer orders and WhatsApp checkout transactions",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "customerName": { "type": "string" },
+        "phone": { "type": "string" },
+        "totalAmount": { "type": "number" },
+        "status": { "type": "string" }
+      },
+      "required": ["customerName", "phone", "totalAmount"]
+    },
+    "certificates": {
+      "title": "certificates",
+      "description": "Official SmartTech certificate database and verification records",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "certificateNumber": { "type": "string" },
+        "serialNumber": { "type": "string" },
+        "verificationId": { "type": "string" },
+        "studentName": { "type": "string" },
+        "courseName": { "type": "string" },
+        "status": { "type": "string" },
+        "result": { "type": "string" }
+      },
+      "required": ["certificateNumber", "serialNumber", "verificationId", "studentName", "courseName"]
+    },
+    "certificateAuditLogs": {
+      "title": "certificateAuditLogs",
+      "description": "Audit trails for certificate creation, verification, and revocation",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "action": { "type": "string" },
+        "timestamp": { "type": "string" }
+      },
+      "required": ["action", "timestamp"]
+    },
     "activityLogs": {
       "title": "activityLogs",
       "description": "System activity logs",

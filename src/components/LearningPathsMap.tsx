@@ -25,7 +25,7 @@ import { motion, AnimatePresence } from 'motion/react';
 
 interface LearningPathsMapProps {
   paths: LearningPath[];
-  onSelectPath: (pathId: string) => void;
+  onSelectPath?: (pathId: string) => void;
 }
 
 export const LearningPathsMap: React.FC<LearningPathsMapProps> = ({
@@ -290,7 +290,7 @@ export const LearningPathsMap: React.FC<LearningPathsMapProps> = ({
                   </div>
 
                   <button
-                    onClick={() => onSelectPath(selectedPath.id)}
+                    onClick={() => onSelectPath?.(selectedPath.id)}
                     className="w-full py-4 rounded-2xl bg-gradient-to-r from-red-600 via-red-500 to-amber-500 hover:from-red-500 hover:to-amber-600 text-white font-black text-sm shadow-xl shadow-red-600/30 flex items-center justify-center gap-2 cursor-pointer transition-transform hover:scale-105"
                   >
                     <span>الانضمام والتسجيل في هذا المسار</span>
@@ -369,7 +369,7 @@ export const LearningPathsMap: React.FC<LearningPathsMapProps> = ({
                   <p className="text-xs text-slate-400">تحدث مع مستشارنا التعليمي بالأكاديمية أو احجز جلسة تقييم مجانية بالمقر الرئيسي بزيزينيا الإسكندرية.</p>
                 </div>
                 <button
-                  onClick={() => onSelectPath(selectedPath.id)}
+                  onClick={() => onSelectPath?.(selectedPath.id)}
                   className="px-6 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs shadow-lg shadow-amber-500/20 flex items-center gap-2 cursor-pointer"
                 >
                   <span>تأكيد تسجيل الطفل بالمسار</span>

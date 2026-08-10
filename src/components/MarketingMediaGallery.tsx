@@ -160,7 +160,7 @@ export const MarketingMediaGallery: React.FC<MarketingMediaGalleryProps> = ({
         <div className="space-y-1">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-600/15 border border-red-500/30 text-red-400 font-extrabold text-xs">
             <Youtube className="w-3.5 h-3.5 text-red-500" />
-            <span>{isArabic ? 'مركز الفيديوهات والروابط التسويقية (Media & Posts)' : 'Media & Social Posts Feed'}</span>
+            <span>{isArabic ? 'مركز الفيديوهات والروائط التسويقية (Media & Posts)' : 'Media & Social Posts Feed'}</span>
           </div>
           <h2 className="text-xl sm:text-2xl font-black text-white">
             {isArabic ? 'معرض الميديا، المنشورات وفيديوهات YouTube 🎬' : 'Media Gallery, Posts & YouTube Videos 🎬'}
@@ -171,17 +171,6 @@ export const MarketingMediaGallery: React.FC<MarketingMediaGalleryProps> = ({
               : 'Explore promo videos, official page posts, and course trailers.'}
           </p>
         </div>
-
-        {/* Action Button for Admin/Staff */}
-        {isAdmin && (
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="px-5 py-3 rounded-2xl bg-red-600 hover:bg-red-500 text-white font-extrabold text-xs shadow-lg shadow-red-600/20 flex items-center gap-2.5 transition cursor-pointer shrink-0"
-          >
-            <Plus className="w-4 h-4" />
-            <span>{isArabic ? 'إضافة رابط فيديو / منشور جديد' : 'Add Video / Post Link'}</span>
-          </button>
-        )}
       </div>
 
       {/* Category Filter Tabs */}
@@ -299,16 +288,6 @@ export const MarketingMediaGallery: React.FC<MarketingMediaGalleryProps> = ({
                     >
                       <ExternalLink className="w-3.5 h-3.5" />
                     </a>
-
-                    {isAdmin && (
-                      <button
-                        onClick={() => handleDeleteItem(item.id)}
-                        className="p-1.5 rounded-lg bg-red-950/60 text-red-400 hover:bg-red-900 transition cursor-pointer"
-                        title="حذف الرابط"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    )}
                   </div>
                 </div>
               </motion.div>

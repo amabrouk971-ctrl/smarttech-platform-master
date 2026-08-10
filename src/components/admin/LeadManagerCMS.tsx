@@ -6,8 +6,9 @@ import {
 } from 'lucide-react';
 import { 
   Lead, ExtendedLeadStatus, LeadPriority, LeadSource, User as UserType, 
-  Employee, LeadCall, LeadMessage, LeadFollowUp, LeadAssignmentHistory, Course, LearningPath 
+  Employee, LeadCall, LeadMessage, LeadFollowUp, LeadAssignmentHistory, Course, LearningPath, Role 
 } from '../../types';
+import { awardXP, trackGoalProgress } from '../../services/gamificationService';
 import { 
   fetchLeadsFromFirestore, createLeadInFirestore, updateLeadInFirestore, 
   assignLeadInFirestore, logCallInFirestore, logMessageInFirestore, 
@@ -212,6 +213,10 @@ export const LeadManagerCMS: React.FC<LeadManagerCMSProps> = ({ currentUser }) =
   const handleStatusChange = async (leadId: string, newStatus: ExtendedLeadStatus) => {
     await updateLeadInFirestore(leadId, { status: newStatus }, currentUser ? { id: currentUser.id, name: currentUser.name } : undefined);
     await loadAllData();
+    
+    if (currentUser) {
+      await awardXP(currentUser.id, currentUser.role || Role.ADMIN, 'LEAD_STATUS_CHANGED', `${leadId}-${Date.now()}`, 'LEAD', `Changed status to ${newStatus}`, 5);
+    }
     if (selectedLead && selectedLead.id === leadId) {
       setSelectedLead({ ...selectedLead, status: newStatus });
     }
@@ -273,6 +278,11 @@ export const LeadManagerCMS: React.FC<LeadManagerCMSProps> = ({ currentUser }) =
         },
         { id: empId, name: empName }
       );
+      
+      if (currentUser) {
+        await awardXP(currentUser.id, currentUser.role || Role.ADMIN, 'CRM_CALL_LOGGED', `CALL-${Date.now()}`, 'CRM_CALL', 'Logged a call', 15);
+        await trackGoalProgress(currentUser.id, 'goal_crm_contacts', 1);
+      }
 
       setShowCallModal(false);
       setCallForm({ direction: 'OUTBOUND', result: 'INTERESTED', duration: '3m', notes: '', nextFollowUpAt: '' });
@@ -311,6 +321,11 @@ export const LeadManagerCMS: React.FC<LeadManagerCMSProps> = ({ currentUser }) =
         },
         { id: empId, name: empName }
       );
+      
+      if (currentUser) {
+        await awardXP(currentUser.id, currentUser.role || Role.ADMIN, 'CRM_MESSAGE_LOGGED', `MSG-${Date.now()}`, 'CRM_MSG', 'Logged a message', 10);
+        await trackGoalProgress(currentUser.id, 'goal_crm_contacts', 1);
+      }
 
       setShowMsgModal(false);
       setMsgForm({ channel: 'WhatsApp', direction: 'OUTBOUND', messageSummary: '' });
@@ -340,6 +355,11 @@ export const LeadManagerCMS: React.FC<LeadManagerCMSProps> = ({ currentUser }) =
       );
       setShowConvertModal(false);
       await loadAllData();
+      
+      if (currentUser) {
+        await awardXP(currentUser.id, currentUser.role || Role.ADMIN, 'LEAD_CONVERTED', selectedLead.id, 'LEAD', 'Converted a lead to student', 100);
+        await trackGoalProgress(currentUser.id, 'goal_crm_conversions', 1);
+      }
       alert(`🎉 تم تحويل الليد وتفعيل عضوية الطالب (${result.studentUser.name}) بنجاح مع احتساب الإيراد لـ (${selectedLead.assignedEmployeeName || 'الموظف المسؤول'})!`);
     } catch (err: any) {
       alert(`خطأ في تحويل الليد: ${err.message || err}`);

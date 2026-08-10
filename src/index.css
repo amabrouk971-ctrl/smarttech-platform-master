@@ -1,3 +1,95 @@
 @import "tailwindcss";
 
 @custom-variant dark (&:where(.dark, .dark *));
+
+/* ============================================================ */
+/* SMARTTECH MULTI-COLOR DESIGN TOKEN SYSTEM                   */
+/* ============================================================ */
+:root {
+  --smart-red: #dc2626;
+  --smart-red-hover: #b91c1c;
+  --smart-blue: #2563eb;
+  --smart-blue-hover: #1d4ed8;
+  --smart-purple: #9333ea;
+  --smart-cyan: #0891b2;
+  --smart-yellow: #eab308;
+  --smart-green: #16a34a;
+  --smart-orange: #ea580c;
+  
+  --smart-bg-light: #f8fafc;
+  --smart-card-light: #ffffff;
+  --smart-border-light: #e2e8f0;
+  --smart-text-light: #0f172a;
+  --smart-text-muted-light: #64748b;
+  
+  --smart-bg-dark: #020617;
+  --smart-card-dark: #0f172a;
+  --smart-border-dark: #1e293b;
+  --smart-text-dark: #f8fafc;
+  --smart-text-muted-dark: #94a3b8;
+}
+
+/* Ensure smooth scrolling across the entire page */
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 5rem; /* Account for sticky header offset */
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.05);
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: rgba(2, 6, 23, 0.5);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #334155;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #dc2626;
+}
+
+/* Glassmorphism Classes */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.dark .glass-panel {
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Button Micro-Interactions */
+.btn-micro {
+  transition: transform 180ms cubic-bezier(0.4, 0, 0.2, 1), box-shadow 180ms ease, background-color 180ms ease;
+}
+
+.btn-micro:hover {
+  transform: translateY(-2px);
+}
+
+.btn-micro:active {
+  transform: translateY(0px) scale(0.98);
+}
+
+/* Accessible outline focus states */
+*:focus-visible {
+  outline: 2px solid var(--smart-red);
+  outline-offset: 2px;
+}

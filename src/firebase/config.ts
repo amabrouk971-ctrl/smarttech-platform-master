@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { initializeAuth, getAuth, browserLocalPersistence, browserSessionPersistence, inMemoryPersistence, GoogleAuthProvider } from 'firebase/auth';
+import { initializeAuth, getAuth, browserLocalPersistence, browserSessionPersistence, inMemoryPersistence, GoogleAuthProvider, browserPopupRedirectResolver } from 'firebase/auth';
 import { initializeFirestore, getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import configData from '../../firebase-applet-config.json';
@@ -20,7 +20,8 @@ export const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfi
 let authInstance;
 try {
   authInstance = initializeAuth(app, {
-    persistence: [browserLocalPersistence, browserSessionPersistence, inMemoryPersistence]
+    persistence: [browserLocalPersistence, browserSessionPersistence, inMemoryPersistence],
+    popupRedirectResolver: browserPopupRedirectResolver
   });
 } catch {
   authInstance = getAuth(app);

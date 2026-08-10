@@ -145,8 +145,41 @@ export const BrandingProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       reader.onload = async (e) => {
         const resultUrl = e.target?.result as string;
         if (resultUrl) {
-          await updateSettings({ logoUrl: resultUrl });
-          resolve(resultUrl);
+          const img = new window.Image();
+          img.onload = async () => {
+            const canvas = document.createElement('canvas');
+            let width = img.width;
+            let height = img.height;
+            const maxDim = 800;
+
+            if (width > height) {
+              if (width > maxDim) {
+                height = Math.round((height * maxDim) / width);
+                width = maxDim;
+              }
+            } else {
+              if (height > maxDim) {
+                width = Math.round((width * maxDim) / height);
+                height = maxDim;
+              }
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+              ctx.drawImage(img, 0, 0, width, height);
+              // Use PNG for logo to preserve transparency
+              const compressedDataUrl = canvas.toDataURL('image/png');
+              
+              await updateSettings({ logoUrl: compressedDataUrl });
+              resolve(compressedDataUrl);
+            } else {
+              await updateSettings({ logoUrl: resultUrl });
+              resolve(resultUrl);
+            }
+          };
+          img.src = resultUrl;
         } else {
           reject(new Error('تعذر قراءة ملف الصورة.'));
         }

@@ -5,13 +5,15 @@ import confetti from 'canvas-confetti';
 interface SkillAssessmentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSelectPath: (pathId: string) => void;
+  onSelectPath?: (pathId: string) => void;
+  onComplete?: (recommendation: any) => void;
 }
 
 export const SkillAssessmentModal: React.FC<SkillAssessmentModalProps> = ({
   isOpen,
   onClose,
-  onSelectPath
+  onSelectPath,
+  onComplete
 }) => {
   if (!isOpen) return null;
 
@@ -36,14 +38,17 @@ export const SkillAssessmentModal: React.FC<SkillAssessmentModalProps> = ({
       const data = await response.json();
       setAssessmentResult(data);
       setStep('result');
+      if (onComplete) onComplete(data);
       confetti({ particleCount: 80, spread: 60, origin: { y: 0.6 } });
     } catch (err) {
-      setAssessmentResult({
+      const fallbackData = {
         recommendedPathId: age < 9 ? 'junior-programmer' : 'future-engineer',
         levelTitle: 'برمجيات واستكشاف الذكاء الاصطناعي',
         assessmentSummary: 'بناءً على عمرك واهتماماتك، ننصحك بالبدء فوراً في مسار التطبيق والبرمجة التفاعلية بـ Scratch وArduino!'
-      });
+      };
+      setAssessmentResult(fallbackData);
       setStep('result');
+      if (onComplete) onComplete(fallbackData);
     }
   };
 
@@ -147,7 +152,9 @@ export const SkillAssessmentModal: React.FC<SkillAssessmentModalProps> = ({
 
             <button
               onClick={() => {
-                onSelectPath(assessmentResult.recommendedPathId);
+                if (onSelectPath && assessmentResult?.recommendedPathId) {
+                  onSelectPath(assessmentResult.recommendedPathId);
+                }
                 onClose();
               }}
               className="w-full py-3.5 bg-red-600 hover:bg-red-700 text-white font-extrabold text-xs rounded-2xl shadow transition cursor-pointer"
