@@ -1,0 +1,165 @@
+{
+  "entities": {
+    "users": {
+      "title": "users",
+      "description": "User account profiles and roles",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "fullName": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "role": { "type": "string" },
+        "approvalStatus": { "type": "string" },
+        "xp": { "type": "number" },
+        "level": { "type": "number" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["fullName", "email", "role"]
+    },
+    "courses": {
+      "title": "courses",
+      "description": "SmartTech courses catalog and details",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "code": { "type": "string" },
+        "titleAr": { "type": "string" },
+        "titleEn": { "type": "string" },
+        "category": { "type": "string" },
+        "originalPrice": { "type": "number" },
+        "discountPrice": { "type": "number" },
+        "summer3MonthsPrice": { "type": "number" },
+        "kitPrice": { "type": "number" },
+        "image": { "type": "string" },
+        "bannerImage": { "type": "string" },
+        "thumbnailImage": { "type": "string" },
+        "accessMode": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["code", "titleAr", "originalPrice"]
+    },
+    "transactions": {
+      "title": "transactions",
+      "description": "Real financial transactions and payment records",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "transactionId": { "type": "string" },
+        "studentId": { "type": "string" },
+        "studentName": { "type": "string" },
+        "parentName": { "type": "string" },
+        "courseId": { "type": "string" },
+        "courseTitleAr": { "type": "string" },
+        "amount": { "type": "number" },
+        "discount": { "type": "number" },
+        "finalAmount": { "type": "number" },
+        "paymentMethod": { "type": "string" },
+        "paymentStatus": { "type": "string" },
+        "transactionDate": { "type": "string" },
+        "createdBy": { "type": "string" }
+      },
+      "required": ["transactionId", "amount", "finalAmount", "paymentStatus"]
+    },
+    "academyMemberships": {
+      "title": "academyMemberships",
+      "description": "Academy entitlement and active student memberships",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "studentId": { "type": "string" },
+        "studentName": { "type": "string" },
+        "parentName": { "type": "string" },
+        "status": { "type": "string" },
+        "membershipType": { "type": "string" },
+        "startDate": { "type": "string" },
+        "endDate": { "type": "string" }
+      },
+      "required": ["studentId", "status", "startDate", "endDate"]
+    },
+    "leads": {
+      "title": "leads",
+      "description": "Lead inquiries and WhatsApp registration flow",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "leadId": { "type": "string" },
+        "parentName": { "type": "string" },
+        "studentName": { "type": "string" },
+        "phone": { "type": "string" },
+        "whatsappNumber": { "type": "string" },
+        "status": { "type": "string" },
+        "selectedPath": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["parentName", "phone", "status"]
+    },
+    "courseImages": {
+      "title": "courseImages",
+      "description": "Storage image metadata and download URLs",
+      "type": "object",
+      "properties": {
+        "imageId": { "type": "string" },
+        "courseId": { "type": "string" },
+        "type": { "type": "string" },
+        "storagePath": { "type": "string" },
+        "downloadUrl": { "type": "string" },
+        "uploadedBy": { "type": "string" }
+      },
+      "required": ["imageId", "storagePath", "downloadUrl"]
+    },
+    "exams": {
+      "title": "exams",
+      "description": "Dynamic exams and quizzes configuration",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "titleAr": { "type": "string" },
+        "examType": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["titleAr", "status"]
+    },
+    "assignments": {
+      "title": "assignments",
+      "description": "Homework and assignment tasks",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "titleAr": { "type": "string" }
+      },
+      "required": ["titleAr"]
+    },
+    "announcements": {
+      "title": "announcements",
+      "description": "Center announcements and news",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "titleAr": { "type": "string" }
+      },
+      "required": ["titleAr"]
+    },
+    "materials": {
+      "title": "materials",
+      "description": "Educational materials and PDFs",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "titleAr": { "type": "string" }
+      },
+      "required": ["titleAr"]
+    },
+    "activityLogs": {
+      "title": "activityLogs",
+      "description": "System activity logs",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "action": { "type": "string" }
+      },
+      "required": ["action"]
+    }
+  }
+}

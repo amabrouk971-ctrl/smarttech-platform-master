@@ -1,0 +1,6 @@
+{
+  "name": "SmartTech Academy - Education Ecosystem 2026",
+  "description": "Interactive STEM, AI, Programming, Robotics, and Electronics Learning Ecosystem with live coding labs, circuit simulators, gamification, and multi-tier dashboards.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
