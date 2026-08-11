@@ -2,6 +2,7 @@ export enum Role {
   SUPER_ADMIN = 'SUPER_ADMIN',
   ADMIN = 'ADMIN',
   COORDINATOR = 'COORDINATOR',
+  EMPLOYEE = 'EMPLOYEE',
   TEACHER = 'TEACHER',
   STUDENT = 'STUDENT',
   ATTENDEE = 'ATTENDEE',
@@ -64,6 +65,9 @@ export interface StudentProfile {
   parentPhone?: string;
   parentEmail?: string;
   educationLevel?: string;
+  classId?: string;
+  groupId?: string;
+  batchId?: string;
   qrToken?: string;
   qrTokenCreatedAt?: string;
   qrStatus?: 'ACTIVE' | 'REVOKED' | 'EXPIRED';
@@ -190,6 +194,106 @@ export interface Notification {
   status: 'UNREAD' | 'READ';
 }
 
+export interface CustomerAddress {
+  country: string;
+  governorate?: string;
+  city: string;
+  area?: string;
+  street?: string;
+  building?: string;
+  apartment?: string;
+  postalCode?: string;
+  additionalNotes?: string;
+}
+
+export interface CustomerEducationRecord {
+  id: string;
+  institutionName: string;
+  educationType: 'SCHOOL' | 'UNIVERSITY' | 'INSTITUTE' | 'TRAINING_CENTER' | 'OTHER';
+  gradeLevel?: string;
+  startDate?: string;
+  endDate?: string;
+  fieldOfStudy?: string;
+  description?: string;
+}
+
+export interface CustomerDocument {
+  documentId: string;
+  userId: string;
+  documentType: 'SCHOOL_CERTIFICATE' | 'STATEMENT' | 'UNIVERSITY_DEGREE' | 'TRAINING_CERTIFICATE' | 'DIPLOMA' | 'OTHER';
+  title: string;
+  description?: string;
+  institution?: string;
+  issueDate?: string;
+  fileName: string;
+  mimeType: string;
+  fileSize: number;
+  fileUrl?: string;
+  storagePath?: string;
+  createdAt: string;
+  updatedAt?: string;
+  uploadedBy: string;
+  verificationStatus: 'PENDING' | 'VERIFIED' | 'REJECTED' | 'NEEDS_REVIEW';
+  verifiedBy?: string;
+  verifiedAt?: string;
+  internalNotes?: string;
+  rejectionReason?: string;
+  visibility: 'PRIVATE' | 'ADMIN_ONLY' | 'PUBLIC';
+}
+
+export interface CustomerIdentityDocument {
+  documentId: string;
+  userId: string;
+  identityType: 'NATIONAL_ID' | 'PASSPORT' | 'STUDENT_ID' | 'OTHER';
+  documentNumber?: string;
+  fileName: string;
+  mimeType: string;
+  fileSize: number;
+  fileUrl?: string;
+  storagePath?: string;
+  createdAt: string;
+  updatedAt?: string;
+  verificationStatus: 'PENDING' | 'VERIFIED' | 'REJECTED' | 'NEEDS_REVIEW';
+  verifiedBy?: string;
+  verifiedAt?: string;
+  internalNotes?: string;
+  rejectionReason?: string;
+}
+
+export interface ProfileEmergencyContact {
+  name: string;
+  relation: string;
+  phone: string;
+  whatsapp?: string;
+}
+
+export interface ProfileFieldDefinition {
+  fieldId: string;
+  labelAr: string;
+  labelEn: string;
+  fieldType: 'TEXT' | 'NUMBER' | 'DATE' | 'SELECT' | 'FILE' | 'CHECKBOX';
+  required: boolean;
+  visible: boolean;
+  editable: boolean;
+  roleAccess: Role[];
+  validation?: string;
+  order: number;
+}
+
+export interface AdminProfileSettingsConfig {
+  allowedFileTypes: string[]; // e.g. ['jpg', 'jpeg', 'png', 'webp', 'pdf']
+  maxFileSizeMB: number; // e.g. 5
+  profilePhotoMinResolution?: string;
+  enableIdentityUpload: boolean;
+  enableEducationUpload: boolean;
+  enableEmergencyContact: boolean;
+  defaultPhotoVisibility: 'PRIVATE' | 'ACCOUNT_ONLY' | 'TEACHERS_STAFF' | 'CLASS' | 'PUBLIC';
+  requireVerificationForCertificates: boolean;
+  fieldsConfig: ProfileFieldDefinition[];
+  updatedAt?: string;
+  updatedBy?: string;
+}
+
 export interface User {
   id: string;
   name: string;
@@ -225,6 +329,25 @@ export interface User {
   qrToken?: string;
   qrStatus?: 'ACTIVE' | 'REVOKED' | 'EXPIRED';
   branchId?: string;
+
+  // Extended Customer Profile Fields
+  firstName?: string;
+  lastName?: string;
+  displayName?: string;
+  dateOfBirth?: string;
+  gender?: 'MALE' | 'FEMALE' | 'OTHER' | 'PREFER_NOT_TO_SAY';
+  whatsappNumber?: string;
+  isPhoneAndWhatsappSame?: boolean;
+  country?: string;
+  city?: string;
+  address?: CustomerAddress;
+  educationHistory?: CustomerEducationRecord[];
+  documents?: CustomerDocument[];
+  identityDocuments?: CustomerIdentityDocument[];
+  emergencyContactDetails?: ProfileEmergencyContact;
+  profilePhotoVisibility?: 'PRIVATE' | 'ACCOUNT_ONLY' | 'TEACHERS_STAFF' | 'CLASS' | 'PUBLIC';
+  profileVisibility?: 'PRIVATE' | 'PUBLIC';
+  profileCompletionPercentage?: number;
 }
 
 export interface LearningPathStage {
@@ -1359,7 +1482,7 @@ export interface StudentProject {
 export type ExamType = 'QUIZ' | 'TEST' | 'MIDTERM' | 'FINAL' | 'PRACTICE' | 'ASSESSMENT' | 'CHALLENGE';
 export type ResultVisibility = 'IMMEDIATE' | 'AFTER_REVIEW' | 'SCHEDULED' | 'NEVER';
 export type QuestionType = 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE' | 'TRUE_FALSE' | 'SHORT_ANSWER' | 'ESSAY' | 'CODE';
-export type TargetType = 'EVERYONE' | 'STUDENT' | 'GROUP' | 'COURSE' | 'ROLE';
+export type TargetType = 'EVERYONE' | 'STUDENT' | 'GROUP' | 'CLASS' | 'BATCH' | 'COURSE' | 'ROLE';
 
 export interface ContentTarget {
   type: TargetType;
@@ -1984,7 +2107,28 @@ export type MaterialType =
   | 'RESOURCE' 
   | 'OTHER';
 
-export type MaterialStatus = 'DRAFT' | 'SCHEDULED' | 'AVAILABLE' | 'LOCKED' | 'ARCHIVED';
+export type MaterialStatus = 'DRAFT' | 'SCHEDULED' | 'AVAILABLE' | 'LOCKED' | 'ARCHIVED' | 'PUBLISHED';
+
+export type MaterialAccessType = 
+  | 'ALL_ENROLLED_STUDENTS' 
+  | 'SPECIFIC_STUDENTS' 
+  | 'SPECIFIC_GROUP' 
+  | 'SPECIFIC_CLASS' 
+  | 'SPECIFIC_BATCH' 
+  | 'SPECIFIC_SESSION' 
+  | 'SPECIFIC_LEARNING_PATH';
+
+export type MaterialVisibility = 
+  | 'PUBLIC' 
+  | 'SIGNED_IN_USERS' 
+  | 'ENROLLED_STUDENTS' 
+  | 'STUDENT_ONLY' 
+  | 'SPECIFIC_STUDENTS' 
+  | 'SPECIFIC_CLASS' 
+  | 'SPECIFIC_GROUP' 
+  | 'TEACHER_ONLY' 
+  | 'ADMIN_ONLY' 
+  | 'SUPER_ADMIN_ONLY';
 
 export type MaterialAvailabilityRule = 
   | 'IMMEDIATE' 
@@ -2005,16 +2149,23 @@ export interface CourseMaterial {
   courseId?: string;
   unitId?: string;
   lessonId?: string;
+  sessionId?: string;
   url?: string;
   fileUrl?: string;
-  fileType?: 'PDF' | 'VIDEO' | 'DOC' | 'ZIP' | 'LINK' | string;
+  fileType?: 'PDF' | 'VIDEO' | 'DOC' | 'PPT' | 'PPTX' | 'ZIP' | 'LINK' | string;
   target?: ContentTarget;
   storagePath?: string;
   thumbnail?: string;
   mimeType?: string;
   fileSize?: number;
   durationMinutes?: number;
-  visibility?: 'PUBLIC' | 'STUDENT_ONLY' | 'ADMIN_ONLY';
+  visibility?: MaterialVisibility;
+  accessType?: MaterialAccessType;
+  assignedStudentIds?: string[];
+  assignedClassIds?: string[];
+  assignedGroupIds?: string[];
+  sessionOnly?: boolean;
+  requiresSpecificSession?: boolean;
   status?: MaterialStatus;
   availabilityRule?: MaterialAvailabilityRule;
   availableFrom?: string;

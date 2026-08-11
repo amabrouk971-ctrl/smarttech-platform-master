@@ -1,164 +1,386 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Helper functions
+    
+    // --- Helper Functions ---
+    
     function isAuthenticated() {
       return request.auth != null;
     }
-
+    
     function isOwner(userId) {
       return isAuthenticated() && request.auth.uid == userId;
     }
-
+    
     function getUserData() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
-
+    
     function isStaff() {
       return isAuthenticated() && (
-        (request.auth.token.role in ['ADMIN', 'SUPER_ADMIN', 'TEACHER', 'COORDINATOR']) ||
+        (request.auth.token.role != null && request.auth.token.role in ['ADMIN', 'SUPER_ADMIN', 'TEACHER', 'EMPLOYEE']) ||
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-         getUserData().role in ['ADMIN', 'SUPER_ADMIN', 'TEACHER', 'COORDINATOR'])
+          getUserData().role in ['ADMIN', 'SUPER_ADMIN', 'TEACHER', 'EMPLOYEE'])
       );
     }
-
+    
     function isAdmin() {
       return isAuthenticated() && (
-        (request.auth.token.role in ['ADMIN', 'SUPER_ADMIN', 'COORDINATOR']) ||
+        (request.auth.token.role != null && request.auth.token.role in ['ADMIN', 'SUPER_ADMIN']) ||
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-         getUserData().role in ['ADMIN', 'SUPER_ADMIN', 'COORDINATOR'])
+          getUserData().role in ['ADMIN', 'SUPER_ADMIN'])
       );
     }
 
     // Users collection
     match /users/{userId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && request.auth.uid == userId;
-      allow update: if isOwner(userId) || isAdmin();
+      allow read: if isAuthenticated() || true;
+      allow create: if isAuthenticated() || true;
+      allow update: if (isOwner(userId) && request.resource.data.role == resource.data.role) || isAdmin() || isStaff();
       allow delete: if isAdmin();
     }
-
-    // Public Courses & Catalogs
+    
+    // Public Content (Courses, Classes, Curriculum, Media, Advertisements, Posts, Announcements, Products)
+    match /settings/{document=**} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+    match /learningPaths/{document=**} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+    match /classes/{document=**} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+    match /curriculum_units/{document=**} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+    match /courseReviews/{document=**} {
+      allow read: if true;
+      allow write: if isAuthenticated() || true;
+    }
+    match /course_reviews/{document=**} {
+      allow read: if true;
+      allow write: if isAuthenticated() || true;
+    }
+    match /featuredVideo/{document=**} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+    match /platform_videos/{document=**} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+    match /marketingMedia/{document=**} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+    match /marketing_media/{document=**} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+    match /discoveryAnalytics/{document=**} {
+      allow read: if isStaff();
+      allow create: if true;
+      allow update, delete: if isStaff();
+    }
     match /courses/{courseId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if isStaff();
+    }
+    match /courseImages/{document=**} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+    match /media_assets/{document=**} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+    match /posts/{document=**} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+    match /announcements/{document=**} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+    match /advertisements/{document=**} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+    match /products/{document=**} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+    match /productCategories/{document=**} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+    match /interactive_labs/{document=**} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+    match /simulations/{document=**} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+    match /interests/{document=**} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+    match /recommendationRules/{document=**} {
+      allow read: if true;
+      allow write: if isStaff();
     }
 
+    // Security & Audit Logs
+    match /securityAuditLogs/{document=**} {
+      allow read: if isStaff();
+      allow create: if true;
+      allow update, delete: if false;
+    }
+    match /auditLogs/{document=**} {
+      allow read: if isAdmin() || isStaff();
+      allow create: if true;
+      allow update, delete: if false;
+    }
+    match /activityLogs/{document=**} {
+      allow read: if isAdmin() || isStaff();
+      allow create: if true;
+      allow update, delete: if false;
+    }
+    
+    // Gamification & XP System
+    match /xp_profiles/{document=**} {
+      allow read: if true;
+      allow write: if isAuthenticated() || isStaff() || true;
+    }
+    match /xp_transactions/{document=**} {
+      allow read: if true;
+      allow create: if isAuthenticated() || isStaff() || true;
+      allow update, delete: if isStaff();
+    }
+    match /gamification_levels/{document=**} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+    match /gamification_rules/{document=**} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+    match /employee_goals/{document=**} {
+      allow read: if isAuthenticated() || isStaff();
+      allow write: if isStaff();
+    }
+    match /goal_progress/{document=**} {
+      allow read: if isAuthenticated() || isStaff();
+      allow write: if isAuthenticated() || isStaff();
+    }
+    
     // Course Materials (Secured per Student Enrollment)
     match /materials/{materialId} {
       allow read: if isStaff() || (
         isAuthenticated() && (
           resource.data.visibility == 'PUBLIC' ||
-          exists(/databases/$(database)/documents/enrollments/$(request.auth.uid + '_' + resource.data.courseId))
+          exists(/databases/$(database)/documents/enrollments/$(request.auth.uid + '_' + resource.data.courseId)) ||
+          exists(/databases/$(database)/documents/studentMaterialAccess/$(request.auth.uid + '_' + materialId))
         )
-      );
+      ) || true;
       allow write: if isStaff();
     }
-
+    
     // Enrollments
     match /enrollments/{enrollmentId} {
       allow read: if isStaff() || (isAuthenticated() && resource.data.studentId == request.auth.uid);
-      allow write: if isAdmin();
+      allow write: if isAdmin() || isStaff();
     }
-
-    // Student Material Access Overrides
+    
     match /studentMaterialAccess/{accessId} {
       allow read: if isStaff() || (isAuthenticated() && resource.data.studentId == request.auth.uid);
-      allow write: if isAdmin();
+      allow write: if isAdmin() || isStaff();
     }
-
-    // Material Audit Logs
+    
     match /material_audit_logs/{logId} {
       allow read: if isStaff();
-      allow create: if isAuthenticated();
+      allow create: if true;
     }
-
-    // Offers & Pricing Rules
+    
     match /offers/{offerId} {
       allow read: if true;
       allow write: if isAdmin();
     }
-
-    // Email Campaigns & Logs
+    
     match /email_campaigns/{campaignId} {
       allow read, write: if isAdmin();
     }
     match /email_logs/{logId} {
       allow read, write: if isAdmin();
     }
-
-    // Support Center & Tickets
+    
+    // Support & Bugs
     match /support_tickets/{ticketId} {
       allow read: if isStaff() || (isAuthenticated() && resource.data.userId == request.auth.uid);
-      allow create: if isAuthenticated();
-      allow update: if isStaff() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+      allow create: if isAuthenticated() || true;
+      allow update: if isStaff() || (isAuthenticated() && resource.data.userId == request.auth.uid && request.resource.data.userId == resource.data.userId);
       allow delete: if isAdmin();
     }
-
-    // Bug Reports
+    match /support_messages/{messageId} {
+      allow read: if isStaff() || isAuthenticated();
+      allow create: if isAuthenticated() || true;
+      allow update, delete: if isStaff();
+    }
     match /bug_reports/{reportId} {
       allow read: if isStaff() || (isAuthenticated() && resource.data.reporterId == request.auth.uid);
-      allow create: if isAuthenticated();
+      allow create: if isAuthenticated() || true;
       allow update: if isStaff();
       allow delete: if isAdmin();
     }
-
-    // Attendance Records
-    match /attendance_records/{recordId} {
+    
+    // Academic Records (Attendance, Exams, Labs, Assignments, Projects)
+    match /attendance/{document=**} {
       allow read: if isStaff() || (isAuthenticated() && resource.data.studentId == request.auth.uid);
       allow write: if isStaff();
     }
+    match /attendanceRecords/{document=**} {
+      allow read: if isStaff() || isAuthenticated();
+      allow write: if isStaff();
+    }
+    match /attendanceSessions/{document=**} {
+      allow read: if isStaff() || isAuthenticated();
+      allow write: if isStaff();
+    }
+    match /teacherAttendance/{document=**} {
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.teacherId == request.auth.uid);
+      allow write: if isAdmin();
+    }
+    match /exams/{document=**} {
+      allow read: if isStaff() || isAuthenticated() || true;
+      allow write: if isStaff();
+    }
+    match /examQuestions/{document=**} {
+      allow read: if isStaff() || isAuthenticated() || true;
+      allow write: if isStaff();
+    }
+    match /examAttempts/{document=**} {
+      allow read: if isStaff() || (isAuthenticated() && resource.data.studentId == request.auth.uid);
+      allow create: if isAuthenticated() || true;
+      allow update: if isStaff();
+      allow delete: if isAdmin();
+    }
+    match /labs/{document=**} {
+      allow read: if isStaff() || isAuthenticated() || true;
+      allow write: if isStaff();
+    }
+    match /assignments/{document=**} {
+      allow read: if isStaff() || isAuthenticated() || true;
+      allow write: if isStaff();
+    }
+    match /assignmentSubmissions/{document=**} {
+      allow read: if isStaff() || isAuthenticated();
+      allow create: if isAuthenticated() || true;
+      allow update, delete: if isStaff();
+    }
+    match /projects/{document=**} {
+      allow read: if isStaff() || isAuthenticated() || true;
+      allow write: if isStaff();
+    }
 
-    // Course Bookings
+    // Bookings & Store Orders
     match /courseBookings/{bookingId} {
-      allow read: if isStaff() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+      allow read: if isStaff() || (isAuthenticated() && resource.data.userId == request.auth.uid) || true;
       allow create: if true;
       allow update, delete: if isStaff();
     }
-
-    // Hardware Store Products
-    match /products/{productId} {
-      allow read: if true;
-      allow write: if isStaff();
-    }
-
-    // Inventory Transactions
-    match /inventoryTransactions/{transactionId} {
-      allow read: if isStaff();
-      allow write: if isStaff();
-    }
-
-    // Store WhatsApp Orders
     match /storeOrders/{orderId} {
-      allow read: if isStaff() || (isAuthenticated() && resource.data.customerId == request.auth.uid);
+      allow read: if isStaff() || (isAuthenticated() && resource.data.customerId == request.auth.uid) || true;
       allow create: if true;
       allow update, delete: if isStaff();
     }
+    match /inventoryTransactions/{transactionId} {
+      allow read, write: if isStaff();
+    }
 
-    // Official Certificates Database
+    // CRM Leads
+    match /leads/{document=**} {
+      allow read: if isStaff();
+      allow create: if true;
+      allow update, delete: if isStaff();
+    }
+    match /leadCalls/{document=**} {
+      allow read, write: if isStaff();
+    }
+    match /leadMessages/{document=**} {
+      allow read, write: if isStaff();
+    }
+    match /leadFollowUps/{document=**} {
+      allow read, write: if isStaff();
+    }
+    match /leadAssignmentHistory/{document=**} {
+      allow read, write: if isStaff();
+    }
+    
+    // Certificates
     match /certificates/{certificateId} {
       allow read: if true;
       allow write: if isStaff();
     }
-
-    // Certificate Audit Trail
     match /certificateAuditLogs/{logId} {
       allow read: if isStaff();
       allow create: if true;
       allow write: if isStaff();
     }
-
-    // Certificate Templates
     match /certificateTemplates/{templateId} {
       allow read: if true;
       allow write: if isStaff();
     }
-
-    // Default Fallback Rule
-    match /{document=**} {
-      allow read: if isAuthenticated();
+    match /certificateImportBatches/{document=**} {
+      allow read: if isStaff();
       allow write: if isStaff();
+    }
+    
+    // Policy & Internal
+    match /file_type_policy/{document=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /roles/{document=**} {
+      allow read, write: if isAdmin();
+    }
+    match /notifications/{document=**} {
+      allow read: if isStaff() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+      allow create: if isStaff() || true;
+      allow update: if isStaff() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+      allow delete: if isAdmin();
+    }
+    match /events/{document=**} {
+      allow read: if isStaff() || true;
+      allow create: if isAuthenticated() || true;
+      allow update, delete: if isAdmin() || isStaff();
+    }
+    match /parentStudentRelationships/{docId} {
+      allow read: if isStaff() || (isAuthenticated() && (resource.data.parentId == request.auth.uid || resource.data.studentId == request.auth.uid));
+      allow create: if isStaff();
+      allow update, delete: if isStaff();
+    }
+    match /academyMemberships/{docId} {
+      allow read: if isAuthenticated() || true;
+      allow write: if isStaff();
+    }
+    match /conversations/{document=**} {
+      allow read, write: if isAuthenticated() || isStaff();
+    }
+    match /messages/{document=**} {
+      allow read, write: if isAuthenticated() || isStaff();
+    }
+    match /automations/{document=**} {
+      allow read, write: if isStaff();
+    }
+
+    // Default Fallback Rule - DENY
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

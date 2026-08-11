@@ -268,9 +268,10 @@ export const logDiscoveryAnalyticsEvent = async (
 ): Promise<void> => {
   try {
     const analyticsCol = collection(db, 'discoveryAnalytics');
+    const cleanData = Object.fromEntries(Object.entries(data).filter(([_, v]) => v !== undefined));
     await addDoc(analyticsCol, {
       eventType,
-      ...data,
+      ...cleanData,
       timestamp: new Date().toISOString()
     });
   } catch (err) {

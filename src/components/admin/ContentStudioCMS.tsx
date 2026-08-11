@@ -23,8 +23,11 @@ import {
   Calendar,
   Layers
 } from 'lucide-react';
-import { collection, getDocs, setDoc, doc, deleteDoc } from 'firebase/firestore';
-import { db } from '../../firebase/config';
+import { collection, getDocs, setDoc, doc, deleteDoc, getDoc } from 'firebase/firestore';
+import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
+import { db, storage } from '../../firebase/config';
+
+import { HeroVideoCMS } from './HeroVideoCMS';
 
 interface ContentStudioCMSProps {
   currentUser?: User;
@@ -43,7 +46,7 @@ export const ContentStudioCMS: React.FC<ContentStudioCMSProps> = ({ currentUser 
   const { isArabic, dir } = useLanguage();
   const isAdmin = currentUser?.role === Role.ADMIN || currentUser?.role === Role.SUPER_ADMIN;
 
-  const [activeTab, setActiveTab] = useState<'media' | 'posts' | 'announcements' | 'gallery' | 'promotions' | 'policy'>('media');
+  const [activeTab, setActiveTab] = useState<'media' | 'posts' | 'announcements' | 'gallery' | 'promotions' | 'advertisements' | 'policy'>('media');
   const [mediaItems, setMediaItems] = useState<MediaAsset[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
   const [policy, setPolicy] = useState<FileTypePolicy>(DEFAULT_POLICY);
@@ -185,32 +188,32 @@ export const ContentStudioCMS: React.FC<ContentStudioCMSProps> = ({ currentUser 
     if (uploadFile.type.startsWith('image/')) type = 'IMAGE';
     if (uploadFile.type.startsWith('video/')) type = 'VIDEO';
 
-    // Mock Object URL for local/storage preview reference
-    const mockStoragePath = `marketing_media/${mediaId}_${uploadFile.name}`;
-    const mockDownloadUrl = URL.createObjectURL(uploadFile);
-
-    const newAsset: MediaAsset = {
-      id: mediaId,
-      title: uploadTitle.trim(),
-      description: uploadDesc.trim(),
-      type,
-      extension: ext,
-      mimeType: uploadFile.type || 'application/octet-stream',
-      storagePath: mockStoragePath,
-      downloadUrl: mockDownloadUrl,
-      fileSize: uploadFile.size,
-      uploadedBy: currentUser?.name || 'Admin',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      status: 'ACTIVE',
-      visibility: uploadVisibility,
-      category: uploadCategory,
-      isPublished: true
-    };
-
-    setMediaItems((prev) => [newAsset, ...prev]);
+    const storagePath = `media/${mediaId}_${uploadFile.name}`;
+    const fileRef = ref(storage, storagePath);
 
     try {
+      await uploadBytesResumable(fileRef, uploadFile);
+      const downloadUrl = await getDownloadURL(fileRef);
+
+      const newAsset: MediaAsset = {
+        id: mediaId,
+        title: uploadTitle.trim(),
+        description: uploadDesc.trim(),
+        type,
+        extension: ext,
+        mimeType: uploadFile.type || 'application/octet-stream',
+        storagePath: storagePath,
+        downloadUrl: downloadUrl,
+        fileSize: uploadFile.size,
+        uploadedBy: currentUser?.name || 'Admin',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        status: 'ACTIVE',
+        visibility: uploadVisibility,
+        category: uploadCategory,
+        isPublished: true
+      };
+
       await setDoc(doc(db, 'media_assets', mediaId), newAsset);
       if (type === 'VIDEO') {
         const videoDoc = {
@@ -218,8 +221,8 @@ export const ContentStudioCMS: React.FC<ContentStudioCMSProps> = ({ currentUser 
           videoId: mediaId,
           title: newAsset.title,
           description: newAsset.description || '',
-          storagePath: mockStoragePath,
-          videoUrl: mockDownloadUrl,
+          storagePath: storagePath,
+          videoUrl: downloadUrl,
           uploadedBy: currentUser?.id || 'admin',
           uploaderName: currentUser?.name || 'Admin',
           uploadedAt: newAsset.createdAt,
@@ -232,19 +235,22 @@ export const ContentStudioCMS: React.FC<ContentStudioCMSProps> = ({ currentUser 
         };
         await setDoc(doc(db, 'platform_videos', mediaId), videoDoc);
       }
+      
+      setMediaItems((prev) => [newAsset, ...prev]);
+      setUploadSuccess(true);
+      setTimeout(() => {
+        setUploadSuccess(false);
+        setShowUploadModal(false);
+        setUploadFile(null);
+        setUploadTitle('');
+        setUploadDesc('');
+      }, 1200);
     } catch (e) {
       console.warn('Firestore set media note:', e);
+      setValidationError('حدث خطأ أثناء الرفع، الرجاء المحاولة مرة أخرى.');
+    } finally {
+      setIsUploading(false);
     }
-
-    setIsUploading(false);
-    setUploadSuccess(true);
-    setTimeout(() => {
-      setUploadSuccess(false);
-      setShowUploadModal(false);
-      setUploadFile(null);
-      setUploadTitle('');
-      setUploadDesc('');
-    }, 1200);
   };
 
   // Save Post
@@ -282,11 +288,29 @@ export const ContentStudioCMS: React.FC<ContentStudioCMSProps> = ({ currentUser 
 
   // Delete Media
   const handleDeleteMedia = async (id: string) => {
-    setMediaItems((prev) => prev.filter((m) => m.id !== id));
+    if (!window.confirm(isArabic ? 'هل أنت متأكد من حذف هذا الملف نهائياً؟' : 'Are you sure you want to delete this media?')) return;
+    
+    const asset = mediaItems.find(m => m.id === id);
+    if (!asset) return;
+
     try {
+      // 1. Delete from Storage
+      if (asset.storagePath && !asset.storagePath.startsWith('marketing_media')) {
+        const fileRef = ref(storage, asset.storagePath);
+        await deleteObject(fileRef).catch(e => console.warn('Storage delete error:', e));
+      }
+      // 2. Delete from platform_videos if video
+      if (asset.type === 'VIDEO') {
+        await deleteDoc(doc(db, 'platform_videos', id));
+      }
+      // 3. Delete from media_assets
       await deleteDoc(doc(db, 'media_assets', id));
+      
+      setMediaItems((prev) => prev.filter((m) => m.id !== id));
+      alert(isArabic ? 'تم حذف الملف بنجاح.' : 'Media deleted successfully.');
     } catch (e) {
       console.warn('Delete media error:', e);
+      alert(isArabic ? 'حدث خطأ أثناء الحذف.' : 'Error deleting media.');
     }
   };
 
@@ -346,6 +370,7 @@ export const ContentStudioCMS: React.FC<ContentStudioCMSProps> = ({ currentUser 
           { id: 'announcements', label: isArabic ? 'الإعلانات الهامة' : 'Announcements', icon: Megaphone },
           { id: 'gallery', label: isArabic ? 'معرض الصور' : 'Photo Gallery', icon: ImageIcon },
           { id: 'promotions', label: isArabic ? 'العروض الترويجية' : 'Promotions', icon: Sparkles },
+          { id: 'advertisements', label: isArabic ? 'إعلانات الفيديو (Hero Video)' : 'Hero Video Ads', icon: Video },
           { id: 'policy', label: isArabic ? 'سياسة امتدادات وأحجام الملفات 🛡️' : 'File Policy & Security', icon: Settings }
         ].map((tab) => {
           const Icon = tab.icon;
@@ -463,6 +488,11 @@ export const ContentStudioCMS: React.FC<ContentStudioCMSProps> = ({ currentUser 
             </div>
           )}
         </div>
+      )}
+
+      {/* TAB: ADVERTISEMENTS (Hero Video) */}
+      {activeTab === 'advertisements' && (
+        <HeroVideoCMS />
       )}
 
       {/* TAB: FILE POLICY CONFIG */}

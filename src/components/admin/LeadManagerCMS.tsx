@@ -17,7 +17,6 @@ import {
   fetchMessagesForLeadFromFirestore, checkDuplicateLead, convertLeadToAcademyMemberInFirestore 
 } from '../../services/leadService';
 import { fetchEmployeesFromFirestore } from '../../services/employeeService';
-import { INITIAL_COURSES, INITIAL_LEARNING_PATHS } from '../../data/seedData';
 
 interface LeadManagerCMSProps {
   currentUser?: UserType | null;

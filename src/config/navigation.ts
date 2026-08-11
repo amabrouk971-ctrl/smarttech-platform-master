@@ -36,5 +36,7 @@ export const NAVIGATION_ITEMS: NavItemConfig[] = [
   { id: 'media', labelAr: 'الميديا والمنشورات', labelEn: 'Media & Posts', category: 'community' },
   { id: 'store', labelAr: 'المتجر والعروض', labelEn: 'Store & Offers', category: 'community', badgeAr: 'خصومات', badgeEn: 'Offers' },
   { id: 'branches', labelAr: 'الفروع والتواصل', labelEn: 'Branches & Contact', category: 'community' },
-  { id: 'verify', labelAr: 'التحقق من الشهادات', labelEn: 'Certificates', category: 'community' }
+  { id: 'verify', labelAr: 'التحقق من الشهادات', labelEn: 'Certificates', category: 'community' },
+  { id: 'smarttech_center', labelAr: 'عن مركز سمارتك', labelEn: 'About SmartTech', category: 'primary', badgeAr: 'رسمي', badgeEn: 'Official' },
+  { id: 'profile', labelAr: 'ملفي الشخصي', labelEn: 'My Profile', category: 'primary', badgeAr: 'خاص', badgeEn: 'Private' }
 ];

@@ -148,6 +148,39 @@ app.get('/api/certificates/verify/:code', (req, res) => {
 
 // --- GEMINI AI FEATURES (SERVER SIDE) ---
 
+// Generic AI test endpoint for Lab Builder
+app.post('/api/ai/generic-test', async (req, res) => {
+  try {
+    const { systemPrompt, userPrompt, temperature, maxTokens } = req.body;
+    const ai = getGeminiClient();
+
+    if (!ai) {
+      return res.json({
+        text: "Error: Gemini API Client not initialized. Please configure API keys.",
+        status: "ERROR"
+      });
+    }
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-3.6-flash',
+      contents: userPrompt || 'Hello!',
+      config: {
+        systemInstruction: systemPrompt || 'You are a helpful assistant.',
+        temperature: temperature !== undefined ? Number(temperature) : 0.7,
+        maxOutputTokens: maxTokens !== undefined ? Number(maxTokens) : 2048
+      }
+    });
+
+    res.json({
+      text: response.text || '',
+      status: "SUCCESS"
+    });
+  } catch (err: any) {
+    console.error('Generic test error:', err);
+    res.status(500).json({ error: err.message || 'AI request failed', status: 'ERROR' });
+  }
+});
+
 // 1. SmartBot AI Tutor: Progressive Scaffolding Hints (3 steps)
 app.post('/api/ai/smartbot-hint', async (req, res) => {
   try {

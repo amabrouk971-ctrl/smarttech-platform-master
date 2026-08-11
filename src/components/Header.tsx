@@ -258,8 +258,9 @@ export const Header: React.FC<HeaderProps> = ({
                 <span className="text-xl font-black tracking-tighter text-slate-950 dark:text-white uppercase leading-none group-hover:text-red-600 transition-colors">
                   {settings.brandNameAr || 'SmartTech'}
                 </span>
-                <span className="text-[10px] font-bold tracking-[0.18em] text-red-600 uppercase leading-none mt-1">
-                  {settings.brandTaglineAr || 'Academy & Labs'}
+                <span className="text-[10px] font-extrabold tracking-wider text-red-600 uppercase leading-none mt-1 flex items-center gap-1">
+                  <span>smart-courses.org</span>
+                  <span className="bg-red-600 text-white px-1 rounded text-[9px] font-black">OFFICIAL</span>
                 </span>
               </div>
             </>
@@ -341,16 +342,33 @@ export const Header: React.FC<HeaderProps> = ({
           {currentUser ? (
             <div className="flex items-center gap-1.5">
               <button
+                onClick={() => setActiveTab('profile')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-extrabold text-xs border transition btn-micro cursor-pointer ${
+                  activeTab === 'profile'
+                    ? 'bg-red-600 text-white border-red-500 shadow-md'
+                    : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-800 dark:text-slate-100 border-slate-200 dark:border-slate-700'
+                }`}
+              >
+                {currentUser.avatar ? (
+                  <img src={currentUser.avatar} alt={currentUser.name} className="w-4 h-4 rounded-full object-cover border border-red-500" />
+                ) : (
+                  <UserIcon className="w-3.5 h-3.5 text-red-500" />
+                )}
+                <span className="max-w-[90px] truncate">{currentUser.name || (isArabic ? 'ملفي الشخصي' : 'MY PROFILE')}</span>
+              </button>
+
+              <button
                 onClick={() => setActiveTab('dashboard')}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-800 dark:text-slate-100 font-bold text-xs border border-slate-200 dark:border-slate-700 cursor-pointer transition btn-micro"
               >
-                <UserIcon className="w-3.5 h-3.5 text-emerald-500" />
-                <span className="max-w-[90px] truncate">{currentUser.name}</span>
+                <GraduationCap className="w-3.5 h-3.5 text-emerald-500" />
+                <span>{isArabic ? 'تعليمي' : 'MY LEARNING'}</span>
               </button>
+
               {onSignOut && (
                 <button
                   onClick={onSignOut}
-                  title="تسجيل الخروج"
+                  title={isArabic ? 'تسجيل الخروج' : 'Sign Out'}
                   className="p-2 rounded-xl bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/60 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/50 cursor-pointer transition btn-micro"
                 >
                   <LogOut className="w-3.5 h-3.5" />
@@ -358,14 +376,35 @@ export const Header: React.FC<HeaderProps> = ({
               )}
             </div>
           ) : (
-            <button
-              onClick={onOpenAuth}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-800 dark:text-slate-100 font-bold text-xs border border-slate-200 dark:border-slate-700 cursor-pointer transition btn-micro"
-            >
-              <UserIcon className="w-3.5 h-3.5 text-red-600" />
-              <span>{isArabic ? 'تسجيل الدخول' : 'Sign In'}</span>
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={onOpenAuth}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-800 dark:text-slate-100 font-bold text-xs border border-slate-200 dark:border-slate-700 cursor-pointer transition btn-micro"
+              >
+                <UserIcon className="w-3.5 h-3.5 text-red-600" />
+                <span>{isArabic ? 'دخول' : 'LOGIN'}</span>
+              </button>
+
+              <button
+                onClick={onOpenAuth}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-black text-xs cursor-pointer transition btn-micro shadow-sm"
+              >
+                <span>{isArabic ? 'تسجيل جديد' : 'REGISTER'}</span>
+              </button>
+            </div>
           )}
+
+          {/* OPEN PLATFORM (app.smart-courses.org) CTA */}
+          <a
+            href="https://app.smart-courses.org"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hidden xl:flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-extrabold text-xs cursor-pointer hover:bg-slate-800 dark:hover:bg-slate-100 transition btn-micro border border-slate-800 dark:border-slate-200"
+            title="Open Protected Learning Platform (app.smart-courses.org)"
+          >
+            <span>{isArabic ? 'منصة التعلم' : 'OPEN PLATFORM'}</span>
+            <span className="text-[10px] text-amber-400">↗</span>
+          </a>
 
           {/* Notifications Toggle */}
           {currentUser && (

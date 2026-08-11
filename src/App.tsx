@@ -26,11 +26,16 @@ import { StoreSection } from './components/StoreSection';
 import { CertificateVerifier } from './components/CertificateVerifier';
 import { SkillAssessmentModal } from './components/SkillAssessmentModal';
 import { SmartBotWidget } from './components/SmartBotWidget';
+import { VoiceNavigationWidget } from './components/navigation/VoiceNavigationWidget';
 import { CustomerPreviewBar } from './components/CustomerPreviewBar';
 import { SignInPage } from './components/auth/SignInPage';
 import { ForgotPasswordPage } from './components/auth/ForgotPasswordPage';
 import { ResetPasswordPage } from './components/auth/ResetPasswordPage';
 import { SecurityProfilePage } from './components/auth/SecurityProfilePage';
+import { CustomerProfilePage } from './components/profile/CustomerProfilePage';
+import { AdminCustomerProfileCMS } from './components/admin/AdminCustomerProfileCMS';
+import { SmartTechCenterView } from './components/SmartTechCenterView';
+import { SmartTechManagementCMS } from './components/admin/SmartTechManagementCMS';
 import { AuthGateModal } from './components/AuthGateModal';
 import { TeacherApplicationModal } from './components/TeacherApplicationModal';
 import { SiteCustomizerModal } from './components/SiteCustomizerModal';
@@ -39,12 +44,13 @@ import { useLanguage } from './context/LanguageContext';
 import { StudentExamsView } from './components/student/StudentExamsView';
 import { StudentProjectsView } from './components/student/StudentProjectsView';
 import { FloatingXpGainToast, XpGainEvent } from './components/AnimatedXpProgress';
-import { INITIAL_COURSES, INITIAL_LEARNING_PATHS } from './data/seedData';
 import { BadgeUnlockModal, Badge } from './components/BadgeUnlockModal';
+import { LearningPath } from './types';
 import { getPaymentSettings, DEFAULT_CONTACT_PAYMENT_SETTINGS } from './services/bookingService';
 import { Course, Role, UserMode, User, XPProfile, ContactPaymentSettings } from './types';
 import { getXPProfile } from './services/gamificationService';
-import { subscribeToCourses, seedAllCoursesToFirestore, updateUserProfileInFirestore } from './services/firebaseService';
+import { subscribeToCourses, updateUserProfileInFirestore } from './services/firebaseService';
+import { getLearningPathsFromFirestore } from './services/learningPathService';
 import { auth, db } from './firebase/config';
 import { onAuthStateChanged, signOut, getRedirectResult } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
@@ -149,6 +155,9 @@ export function App() {
           const userDoc = await getDoc(doc(db, 'users', user.uid));
           if (userDoc.exists()) {
             const userData = { id: userDoc.id, ...userDoc.data() } as User;
+            if (!userData.avatar && user.photoURL) {
+              userData.avatar = user.photoURL;
+            }
             if (specialConfig && (userData.role !== specialConfig.role || userData.approvalStatus !== 'APPROVED')) {
               userData.role = specialConfig.role;
               userData.mode = specialConfig.mode;
@@ -165,6 +174,7 @@ export function App() {
               id: user.uid,
               name: user.displayName || user.email?.split('@')[0] || 'عضو سمارتك',
               email: user.email || '',
+              avatar: user.photoURL || undefined,
               role: specialConfig ? specialConfig.role : Role.STUDENT,
               mode: specialConfig ? specialConfig.mode : UserMode.KIDS,
               approvalStatus: specialConfig ? specialConfig.approvalStatus : 'APPROVED',
@@ -225,7 +235,8 @@ export function App() {
   const [currentBadge, setCurrentBadge] = useState<Badge | null>(null);
 
   // Dynamic Courses State synced with Firebase Firestore
-  const [courses, setCourses] = useState<Course[]>(INITIAL_COURSES);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [learningPaths, setLearningPaths] = useState<LearningPath[]>([]);
   const [selectedCourseForModal, setSelectedCourseForModal] = useState<Course | null>(null);
 
   // Active Lab state ('scratch', 'arduino', 'robotics', 'ai')
@@ -234,19 +245,14 @@ export function App() {
   // Skill Assessment Modal
   const [skillModalOpen, setSkillModalOpen] = useState(false);
 
-  // Subscribe to Firestore courses & seed if needed
+  // Subscribe to Firestore courses & Fetch Paths
   useEffect(() => {
-    seedAllCoursesToFirestore(false).then((dbCourses) => {
-      if (dbCourses && dbCourses.length > 0) {
-        setCourses(dbCourses);
-      }
-    });
-
     const unsubscribe = subscribeToCourses((updatedCourses) => {
-      if (updatedCourses && updatedCourses.length > 0) {
-        setCourses(updatedCourses);
-      }
+      setCourses(updatedCourses);
     });
+    
+    getLearningPathsFromFirestore().then(setLearningPaths).catch(console.error);
+
     return () => unsubscribe();
   }, []);
 
@@ -422,6 +428,7 @@ export function App() {
           <HomePage
             currentUser={currentUser}
             courses={courses}
+            learningPaths={learningPaths}
             onStartLearning={() => setActiveTab('courses')}
             onExplorePaths={() => setActiveTab('paths')}
             onSelectCourse={(c) => setSelectedCourseForModal(c)}
@@ -442,7 +449,7 @@ export function App() {
         {activeTab === 'paths' && (
           <>
             <LearningPathsMap
-              paths={INITIAL_LEARNING_PATHS}
+              paths={learningPaths}
               onSelectPath={() => setActiveTab('courses')}
             />
             <LearningRoadmap
@@ -534,9 +541,38 @@ export function App() {
 
         {activeTab === 'verify' && <CertificateVerifier />}
 
+        {activeTab === 'smarttech_center' && (
+          <section className="py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-12">
+            <SmartTechCenterView onNavigateTab={(tab) => setActiveTab(tab)} />
+
+            {(currentRole === Role.ADMIN || currentRole === Role.SUPER_ADMIN) && !isPreviewMode && (
+              <div className="pt-8 border-t border-slate-200 dark:border-slate-800">
+                <SmartTechManagementCMS currentUser={currentUser} />
+              </div>
+            )}
+          </section>
+        )}
+
+        {activeTab === 'profile' && (
+          <section className="py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-8">
+            <CustomerProfilePage
+              currentUser={currentUser}
+              onUpdateProfile={(updatedUser) => {
+                setCurrentUser(updatedUser);
+              }}
+            />
+
+            {(currentRole === Role.ADMIN || currentRole === Role.SUPER_ADMIN) && !isPreviewMode && (
+              <div className="pt-8 border-t border-slate-200 dark:border-slate-800">
+                <AdminCustomerProfileCMS currentUser={currentUser} />
+              </div>
+            )}
+          </section>
+        )}
+
         {activeTab === 'dashboard' && (
           <section className="py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-            {(isPreviewMode || currentRole === Role.STUDENT) && (
+            {(isPreviewMode || currentRole === Role.STUDENT || currentRole === Role.ATTENDEE) && (
               <KidsDashboard
                 xpPoints={xpPoints}
                 unlockedBadges={unlockedBadges}
@@ -544,17 +580,19 @@ export function App() {
                   setActiveLabId(labId);
                   setActiveTab('labs');
                 }}
-                studentName={currentUser?.name || 'أحمد محمد'}
-                studentId="ST-2026-901"
+                studentName={currentUser?.name || 'عضو سمارتك'}
+                studentId={currentUser?.id ? `ST-${currentUser.id.substring(0, 6)}` : 'ST-2026-901'}
                 onAwardXp={(amt) => handleAwardXp(amt, 'مكافأة عيد الميلاد 🎂')}
               />
             )}
 
             {!isPreviewMode && currentRole === Role.PARENT && <ParentDashboard currentUser={currentUser} />}
 
-            {!isPreviewMode && currentRole === Role.TEACHER && <TeacherDashboard currentUser={currentUser} />}
+            {!isPreviewMode && (currentRole === Role.TEACHER || currentRole === Role.COORDINATOR) && (
+              <TeacherDashboard currentUser={currentUser} />
+            )}
 
-            {!isPreviewMode && (currentRole === Role.ADMIN || currentRole === Role.SUPER_ADMIN) && (
+            {!isPreviewMode && (currentRole === Role.ADMIN || currentRole === Role.SUPER_ADMIN || currentRole === Role.EMPLOYEE) && (
               <AdminDashboard
                 courses={courses}
                 currentUser={currentUser}
@@ -603,6 +641,13 @@ export function App() {
 
       {/* SmartBot Floating AI Tutor */}
       <SmartBotWidget />
+
+      {/* Global Voice Navigation Assistant */}
+      <VoiceNavigationWidget
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        onOpenAuth={() => setActiveTab('sign-in')}
+      />
 
       {/* Footer */}
       <footer className={`bg-slate-950 text-slate-400 py-12 border-t border-slate-800 text-xs ${isArabic ? 'dir-rtl text-right' : 'dir-ltr text-left'}`}>

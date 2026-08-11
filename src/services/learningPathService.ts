@@ -6,7 +6,6 @@ import {
   LearningPath, Course, SpecializationInterest, RecommendationScoringWeights, 
   RecommendationRulesConfig, PathValidationResult, PathCourseSequenceItem 
 } from '../types';
-import { INITIAL_LEARNING_PATHS } from '../data/seedData';
 
 // 1. DIGITAL EMPLOYEE FOUNDATION COURSE CONSTANT
 export const DIGITAL_EMPLOYEE_COURSE: Course = {

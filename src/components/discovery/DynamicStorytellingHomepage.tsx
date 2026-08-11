@@ -19,10 +19,18 @@ import {
 } from '../../services/discoveryService';
 import { fetchCourseReviewsFromFirestore } from '../../services/firebaseService';
 import { getClassesForCourse } from '../../services/classService';
-import { INITIAL_LEARNING_PATHS } from '../../data/seedData';
 import { VisualLearningJourney } from './VisualLearningJourney';
 import { DynamicText } from '../navigation/DynamicText';
 import { SectionReveal } from '../navigation/SectionReveal';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '../../firebase/config';
+import { HeroAdvertisement } from '../admin/HeroVideoCMS';
+import { EcosystemPlatformsSection } from './EcosystemPlatformsSection';
+import { SmartGuideSection } from './SmartGuideSection';
+import { 
+  fetchEcosystemPlatformsFromFirestore, fetchSmartGuideConfigFromFirestore, 
+  fetchFoundationPathConfigFromFirestore, EcosystemPlatform, SmartGuideConfig, FoundationPathConfig 
+} from '../../services/homepageCMS';
 
 // Lazy loaded heavy sections
 const LearningPathsMap = lazy(() => import('../LearningPathsMap').then(m => ({ default: m.LearningPathsMap })));
@@ -47,7 +55,7 @@ interface DynamicStorytellingHomepageProps {
 export const DynamicStorytellingHomepage: React.FC<DynamicStorytellingHomepageProps> = ({
   currentUser,
   courses,
-  learningPaths = INITIAL_LEARNING_PATHS,
+  learningPaths = [],
   onStartLearning,
   onExplorePaths,
   onSelectCourse,
@@ -72,19 +80,61 @@ export const DynamicStorytellingHomepage: React.FC<DynamicStorytellingHomepagePr
   const [isDiscoveryCompleted, setIsDiscoveryCompleted] = useState<boolean>(false);
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
 
+  // Hero Advertisement
+  const [heroAd, setHeroAd] = useState<HeroAdvertisement | null>(null);
+
+  // Ecosystem CMS Data
+  const [ecosystemPlatforms, setEcosystemPlatforms] = useState<EcosystemPlatform[]>([]);
+  const [smartGuide, setSmartGuide] = useState<SmartGuideConfig | null>(null);
+  const [foundationConfig, setFoundationConfig] = useState<FoundationPathConfig | null>(null);
+
   // Parent & Child Profiles
   const [childProfiles, setChildProfiles] = useState<ChildProfileData[]>([]);
   const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
   const [classAvailabilityMap, setClassAvailabilityMap] = useState<Record<string, number>>({});
 
-  // Fetch real class availability from Firebase
+  // Fetch real class availability & CMS settings from Firebase
   useEffect(() => {
     logDiscoveryAnalyticsEvent('discovery_started', { userId: currentUser?.id });
     loadClassAvailability();
+    loadHeroAd();
+    loadCMSData();
     if (currentUser?.id) {
       loadChildProfiles();
     }
   }, [currentUser?.id]);
+
+  const loadCMSData = async () => {
+    try {
+      const [plats, guide, found] = await Promise.all([
+        fetchEcosystemPlatformsFromFirestore(),
+        fetchSmartGuideConfigFromFirestore(),
+        fetchFoundationPathConfigFromFirestore()
+      ]);
+      setEcosystemPlatforms(plats);
+      setSmartGuide(guide);
+      setFoundationConfig(found);
+    } catch (err) {
+      console.warn('CMS data fetch error:', err);
+    }
+  };
+
+  const loadHeroAd = async () => {
+    try {
+      const snap = await getDocs(collection(db, 'advertisements'));
+      if (!snap.empty) {
+        const docItem = snap.docs.find(d => d.id === 'main_hero_video');
+        if (docItem) {
+          const ad = { id: docItem.id, ...docItem.data() } as HeroAdvertisement;
+          if (ad.enabled) {
+            setHeroAd(ad);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Error fetching hero ad', err);
+    }
+  };
 
   const loadClassAvailability = async () => {
     try {
@@ -230,11 +280,29 @@ export const DynamicStorytellingHomepage: React.FC<DynamicStorytellingHomepagePr
         className="relative min-h-[90vh] flex items-center justify-center overflow-hidden pt-8 pb-16"
         style={{ opacity: heroOpacity, scale: heroScale }}
       >
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute -top-20 -left-20 w-[45vw] h-[45vw] bg-red-500/10 rounded-full blur-[120px] animate-pulse" />
-          <div className="absolute bottom-10 -right-10 w-[35vw] h-[35vw] bg-amber-500/10 rounded-full blur-[100px] animate-pulse" style={{ animationDelay: '2s' }} />
-          <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:3.5rem_3.5rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
-        </div>
+        {heroAd && heroAd.videoSource ? (
+          <div className={`absolute inset-0 z-0 overflow-hidden ${heroAd.controls ? '' : 'pointer-events-none'}`}>
+            <video
+              src={heroAd.videoSource}
+              poster={heroAd.posterImage}
+              autoPlay={heroAd.autoplay}
+              muted={heroAd.muted}
+              playsInline={heroAd.playsInline}
+              loop={heroAd.loop}
+              controls={heroAd.controls}
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+            {/* Overlay to ensure text readability */}
+            <div className="absolute inset-0 bg-slate-50/80 dark:bg-slate-950/80 pointer-events-none" />
+            <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:3.5rem_3.5rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] pointer-events-none" />
+          </div>
+        ) : (
+          <div className="absolute inset-0 pointer-events-none z-0">
+            <div className="absolute -top-20 -left-20 w-[45vw] h-[45vw] bg-red-500/10 rounded-full blur-[120px] animate-pulse" />
+            <div className="absolute bottom-10 -right-10 w-[35vw] h-[35vw] bg-amber-500/10 rounded-full blur-[100px] animate-pulse" style={{ animationDelay: '2s' }} />
+            <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:3.5rem_3.5rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
+          </div>
+        )}
 
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center w-full">
           <div className="lg:col-span-7 space-y-8 text-center lg:text-start pt-8 lg:pt-0">
@@ -283,21 +351,22 @@ export const DynamicStorytellingHomepage: React.FC<DynamicStorytellingHomepagePr
             >
               <button 
                 onClick={() => {
-                  const discoveryEl = document.getElementById('discovery-storytelling-wizard');
-                  if (discoveryEl) discoveryEl.scrollIntoView({ behavior: 'smooth' });
+                  const pathsEl = document.getElementById('learning-paths-map-section') || document.getElementById('discovery-storytelling-wizard');
+                  if (pathsEl) pathsEl.scrollIntoView({ behavior: 'smooth' });
+                  else onExplorePaths();
                 }}
-                className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-700 hover:to-amber-700 text-white rounded-2xl font-black shadow-xl shadow-red-600/25 flex items-center justify-center gap-3 transition-all btn-micro cursor-pointer"
+                className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-700 hover:to-amber-700 text-white rounded-2xl font-black shadow-xl shadow-red-600/25 flex items-center justify-center gap-3 transition-all btn-micro cursor-pointer uppercase tracking-wider"
               >
-                <span>{isArabic ? 'ابدأ رحلة الاستكشاف الذكية 🚀' : 'Start Discovery Journey 🚀'}</span>
+                <span>{isArabic ? 'استكشف مسارات التعلم 🚀' : 'EXPLORE LEARNING PATHS 🚀'}</span>
                 <ArrowRight className={`w-5 h-5 ${isArabic ? 'rotate-180' : ''}`} />
               </button>
 
               <button 
                 onClick={() => setActiveTab('courses')}
-                className="w-full sm:w-auto px-8 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white rounded-2xl font-bold transition-all hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center gap-2 cursor-pointer btn-micro"
+                className="w-full sm:w-auto px-8 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white rounded-2xl font-bold transition-all hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center gap-2 cursor-pointer btn-micro uppercase tracking-wider"
               >
                 <Compass className="w-5 h-5 text-red-500" />
-                <span>{isArabic ? 'استكشف كافة الكورسات' : 'Explore All Courses'}</span>
+                <span>{isArabic ? 'تصفح الكورسات' : 'EXPLORE COURSES'}</span>
               </button>
             </motion.div>
           </div>
@@ -307,6 +376,27 @@ export const DynamicStorytellingHomepage: React.FC<DynamicStorytellingHomepagePr
           </div>
         </div>
       </motion.section>
+
+      {/* ============================================================ */}
+      {/* 2. SMART GUIDE / MENTOR SECTION                              */}
+      {/* ============================================================ */}
+      {smartGuide && (
+        <SmartGuideSection 
+          config={smartGuide} 
+          currentUser={currentUser}
+          onLaunchDiscovery={() => {
+            const wiz = document.getElementById('discovery-storytelling-wizard');
+            if (wiz) wiz.scrollIntoView({ behavior: 'smooth' });
+          }} 
+        />
+      )}
+
+      {/* ============================================================ */}
+      {/* 3. ECOSYSTEM PLATFORMS DISCOVERY ("Explore SmartTech")       */}
+      {/* ============================================================ */}
+      {ecosystemPlatforms.length > 0 && (
+        <EcosystemPlatformsSection platforms={ecosystemPlatforms} />
+      )}
 
       {/* ============================================================ */}
       {/* 2. PHASE 1: STORYTELLING WIZARD                               */}

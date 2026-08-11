@@ -1,0 +1,43 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isStaff() {
+      return isAuthenticated() && request.auth.token.role in ['ADMIN', 'SUPER_ADMIN', 'TEACHER', 'COORDINATOR', 'EMPLOYEE'];
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && request.auth.token.role in ['ADMIN', 'SUPER_ADMIN'];
+    }
+    
+    // Public Media Assets
+    match /media_assets/{allPaths=**} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+    
+    match /courses/{courseId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+
+    match /users/{userId}/{allPaths=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && request.auth.uid == userId || isAdmin();
+    }
+    
+    match /certificates/{allPaths=**} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+
+    // Default deny
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

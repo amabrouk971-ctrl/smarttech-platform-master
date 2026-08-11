@@ -3,7 +3,6 @@ import { ShoppingBag, CheckCircle2, Zap, ShoppingCart, Plus, Minus, Send, Search
 import { Product, ContactPaymentSettings, StoreOrderItem } from '../types';
 import { fetchProductsFromFirestore, createStoreOrderInFirestore, saveProductToFirestore } from '../services/firebaseService';
 import { getPaymentSettings, buildWhatsAppUrl, getWhatsAppNumberForMethod, DEFAULT_CONTACT_PAYMENT_SETTINGS } from '../services/bookingService';
-import { INITIAL_STORE_ITEMS } from '../data/seedData';
 
 export const StoreSection: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -28,26 +27,6 @@ export const StoreSection: React.FC = () => {
     setLoading(true);
     try {
       let prods = await fetchProductsFromFirestore();
-      if (prods.length === 0) {
-        // Seed default products to Firestore if empty
-        const seeded: Product[] = [];
-        for (const item of INITIAL_STORE_ITEMS) {
-          const p = await saveProductToFirestore({
-            nameAr: item.nameAr || item.titleAr || 'حقيبة مكونات',
-            sellingPrice: item.price,
-            costPrice: Math.round(item.price * 0.6),
-            stockQuantity: 15,
-            minimumStock: 3,
-            category: item.category || 'kits',
-            description: item.descriptionAr,
-            mainImagePath: item.image,
-            image: item.image,
-            sku: `SKU-${Date.now().toString().slice(-5)}-${Math.floor(Math.random() * 90 + 10)}`
-          });
-          seeded.push(p);
-        }
-        prods = seeded;
-      }
       setProducts(prods);
     } catch (err) {
       console.error('Error loading store products:', err);

@@ -78,13 +78,13 @@ export async function testAIModelPromptOnServer(
 ): Promise<{ text: string; latencyMs: number; tokensUsed: number; status: 'SUCCESS' | 'ERROR'; errorMessage?: string }> {
   const startTime = Date.now();
   try {
-    const res = await fetch('/api/ai/smartbot-hint', {
+    const res = await fetch('/api/ai/generic-test', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        problemTitle: systemPrompt || 'SmartTech Lab AI Test',
-        currentCode: userPrompt,
-        studentAttempts: 1
+        systemPrompt,
+        userPrompt,
+        temperature
       })
     });
 
@@ -94,7 +94,12 @@ export async function testAIModelPromptOnServer(
 
     const data = await res.json();
     const latencyMs = Date.now() - startTime;
-    const text = Array.isArray(data.hints) ? data.hints.join('\n\n') : JSON.stringify(data, null, 2);
+    
+    if (data.status === 'ERROR') {
+      throw new Error(data.error || data.text || 'Unknown error');
+    }
+
+    const text = data.text;
 
     return {
       text,

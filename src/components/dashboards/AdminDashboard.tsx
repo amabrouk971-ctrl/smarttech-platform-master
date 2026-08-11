@@ -34,6 +34,9 @@ import { ExamCMS } from '../admin/ExamCMS';
 import { AssignmentCMS } from '../admin/AssignmentCMS';
 import { AnnouncementCMS } from '../admin/AnnouncementCMS';
 import { MaterialCMS } from '../admin/MaterialCMS';
+import { AdminContentPortal } from '../admin/AdminContentPortal';
+import { FileUploadSettingsCMS } from '../admin/FileUploadSettingsCMS';
+import { HomepageBuilderCMS } from '../admin/HomepageBuilderCMS';
 import { SimulationBuilderCMS } from '../admin/SimulationBuilderCMS';
 import { AdminProjectsCMS } from '../admin/AdminProjectsCMS';
 import { RelationshipsCMS } from '../admin/RelationshipsCMS';
@@ -41,6 +44,9 @@ import { AutomationCMS } from '../admin/AutomationCMS';
 import { EmployeeManagerCMS } from '../admin/EmployeeManagerCMS';
 import { EmployeePerformance } from '../admin/EmployeePerformance';
 import { ContentStudioCMS } from '../admin/ContentStudioCMS';
+import { DashboardOverviewCMS } from '../admin/DashboardOverviewCMS';
+import { AdminCustomerProfileCMS } from '../admin/AdminCustomerProfileCMS';
+import { SmartTechManagementCMS } from '../admin/SmartTechManagementCMS';
 
 // Missing standard views - placeholder components or custom renders can be added
 // For 'Courses', we need to display a course list or use an existing Course CMS if any. 
@@ -74,6 +80,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       case 'DASHBOARD': return [{ id: 'overview', label: 'Platform Overview' }];
       case 'PEOPLE': return [
         { id: 'users', label: 'All Users' },
+        { id: 'profiles', label: 'Customer Profiles & Verification' },
         { id: 'employees', label: 'Employees' },
         { id: 'memberships', label: 'Memberships' },
         { id: 'approvals', label: 'Approvals' }
@@ -96,6 +103,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         { id: 'materials', label: 'Materials' }
       ];
       case 'CONTENT': return [
+        { id: 'smarttechCMS', label: 'SmartTech Center & Equipment CMS' },
+        { id: 'homepageBuilder', label: 'Homepage & Ecosystem Builder' },
+        { id: 'portal', label: 'Admin Content & Sessions' },
         { id: 'studio', label: 'Content Studio' },
         { id: 'announcements', label: 'Announcements' }
       ];
@@ -124,6 +134,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       ];
       case 'SETTINGS': return [
         { id: 'general', label: 'General Settings' },
+        { id: 'fileUpload', label: 'File Upload Settings' },
         { id: 'auth', label: 'Authentication' },
         { id: 'payments', label: 'Payment Settings' },
         { id: 'discovery', label: 'Discovery Engine' },
@@ -220,11 +231,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             
             {/* Render Modules Based on Sub Tab */}
             {activeCategory === 'DASHBOARD' && activeSubTab === 'overview' && (
-              <div className="text-center py-12 text-slate-500">Dashboard Overview Coming Soon</div>
+              <DashboardOverviewCMS />
             )}
 
             {/* People */}
             {activeCategory === 'PEOPLE' && activeSubTab === 'users' && <AdminUsersCMS />}
+            {activeCategory === 'PEOPLE' && activeSubTab === 'profiles' && <AdminCustomerProfileCMS currentUser={currentUser || null} />}
             {activeCategory === 'PEOPLE' && activeSubTab === 'employees' && <EmployeeManagerCMS />}
             {activeCategory === 'PEOPLE' && activeSubTab === 'memberships' && <AcademyMembershipCMS />}
             {activeCategory === 'PEOPLE' && activeSubTab === 'approvals' && <ApprovalDashboardCMS />}
@@ -244,9 +256,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             {activeCategory === 'STUDENT_MANAGEMENT' && activeSubTab === 'attendance' && <QrAttendanceScanner courses={courses} />}
             {activeCategory === 'STUDENT_MANAGEMENT' && activeSubTab === 'enrollments' && <EnrollmentsCMS courses={courses} />}
             {activeCategory === 'STUDENT_MANAGEMENT' && activeSubTab === 'assignments' && <AssignmentCMS />}
-            {activeCategory === 'STUDENT_MANAGEMENT' && activeSubTab === 'materials' && <MaterialCMS />}
+            {activeCategory === 'STUDENT_MANAGEMENT' && activeSubTab === 'materials' && <AdminContentPortal courses={courses} />}
 
             {/* Content */}
+            {activeCategory === 'CONTENT' && activeSubTab === 'smarttechCMS' && <SmartTechManagementCMS currentUser={currentUser || null} />}
+            {activeCategory === 'CONTENT' && activeSubTab === 'homepageBuilder' && <HomepageBuilderCMS />}
+            {activeCategory === 'CONTENT' && activeSubTab === 'portal' && <AdminContentPortal courses={courses} />}
             {activeCategory === 'CONTENT' && activeSubTab === 'studio' && <ContentStudioCMS />}
             {activeCategory === 'CONTENT' && activeSubTab === 'announcements' && <AnnouncementCMS />}
 
@@ -275,6 +290,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
             {/* Settings */}
             {activeCategory === 'SETTINGS' && activeSubTab === 'general' && <AdminSettingsCMS currentUser={currentUser || undefined} />}
+            {activeCategory === 'SETTINGS' && activeSubTab === 'fileUpload' && <FileUploadSettingsCMS />}
             {activeCategory === 'SETTINGS' && activeSubTab === 'auth' && <AuthenticationSettingsCMS />}
             {activeCategory === 'SETTINGS' && activeSubTab === 'payments' && <AdminPaymentSettingsCMS />}
             {activeCategory === 'SETTINGS' && activeSubTab === 'discovery' && <AdminDiscoveryCMS />}

@@ -135,6 +135,8 @@ export const MarketingMediaGallery: React.FC<MarketingMediaGalleryProps> = ({
 
   // Delete media link
   const handleDeleteItem = async (id: string) => {
+    if (!window.confirm(isArabic ? 'هل أنت متأكد من حذف هذا الرابط نهائياً؟' : 'Are you sure you want to delete this media?')) return;
+    
     setItems((prev) => prev.filter((it) => it.id !== id));
     try {
       await deleteDoc(doc(db, 'marketing_media', id));

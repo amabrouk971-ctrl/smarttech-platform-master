@@ -350,9 +350,9 @@ export const fetchCoursesFromFirestore = async (): Promise<Course[]> => {
   try {
     const coursesCol = collection(db, 'courses');
     const snapshot = await getDocs(coursesCol);
-    if (snapshot.empty || snapshot.size < INITIAL_COURSES.length) {
-      console.log('Syncing all initial courses into Firestore database...');
-      return await seedAllCoursesToFirestore(false);
+    if (snapshot.empty) {
+      console.log('No courses found in Firestore. Returning empty list.');
+      return [];
     }
     const courses: Course[] = [];
     snapshot.forEach((d) => {
@@ -360,8 +360,8 @@ export const fetchCoursesFromFirestore = async (): Promise<Course[]> => {
     });
     return courses;
   } catch (err) {
-    console.warn('Firestore fetch failed, returning initial seed courses:', err);
-    return INITIAL_COURSES;
+    console.warn('Firestore fetch failed:', err);
+    return [];
   }
 };
 
@@ -369,18 +369,12 @@ export const fetchCoursesFromFirestore = async (): Promise<Course[]> => {
 export const subscribeToCourses = (callback: (courses: Course[]) => void) => {
   try {
     const coursesCol = collection(db, 'courses');
-    return onSnapshot(coursesCol, async (snapshot) => {
-      if (snapshot.empty || snapshot.size < INITIAL_COURSES.length) {
-        console.log('Courses in Firestore incomplete, seeding missing courses...');
-        await seedAllCoursesToFirestore(false);
-      }
+    return onSnapshot(coursesCol, (snapshot) => {
       const courses: Course[] = [];
       snapshot.forEach((d) => {
         courses.push({ id: d.id, ...d.data() } as Course);
       });
-      if (courses.length > 0) {
-        callback(courses);
-      }
+      callback(courses);
     }, (err) => console.warn('Courses snapshot error:', err));
   } catch (err) {
     console.warn('Firestore subscription failed:', err);
@@ -819,8 +813,13 @@ export const saveProductToFirestore = async (prod: Partial<Product>): Promise<Pr
     createdBy: prod.createdBy || 'Admin'
   };
 
-  await setDoc(doc(db, 'products', prodId), fullProduct, { merge: true });
-  return fullProduct;
+  // Remove undefined values to avoid Firestore errors
+  const cleanProduct = Object.fromEntries(
+    Object.entries(fullProduct).filter(([_, v]) => v !== undefined)
+  );
+
+  await setDoc(doc(db, 'products', prodId), cleanProduct, { merge: true });
+  return cleanProduct as Product;
 };
 
 export const deleteProductFromFirestore = async (productId: string): Promise<void> => {

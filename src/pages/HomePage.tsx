@@ -1,10 +1,11 @@
 import React from 'react';
-import { User as AuthUser, Course } from '../types';
+import { User as AuthUser, Course, LearningPath } from '../types';
 import { DynamicStorytellingHomepage } from '../components/discovery/DynamicStorytellingHomepage';
 
 interface HomePageProps {
   currentUser: AuthUser | null;
   courses: Course[];
+  learningPaths: LearningPath[];
   onStartLearning: () => void;
   onExplorePaths: () => void;
   onSelectCourse: (course: Course) => void;

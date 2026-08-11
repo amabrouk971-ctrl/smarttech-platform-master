@@ -77,7 +77,18 @@ export const ALL_PERMISSIONS = [
   'roles.manage',
   'permissions.manage',
   'settings.manage',
-  'audit_logs.view'
+  'audit_logs.view',
+  // Profile & Documents Permissions
+  'profile.view',
+  'profile.edit',
+  'profile.view_contact',
+  'profile.view_education',
+  'profile.view_certificates',
+  'documents.view_private',
+  'documents.view_identity',
+  'documents.edit',
+  'documents.verify',
+  'documents.delete'
 ] as const;
 
 export type PermissionKey = typeof ALL_PERMISSIONS[number];
@@ -148,6 +159,22 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<Role, { permissions: string[]; pag
     pages: [
       'dashboard', 'students', 'parents', 'teachers', 'courses', 'groups', 'sessions',
       'attendance', 'qr_scanner', 'exams', 'assignments', 'labs', 'messages', 'notifications', 'reports', 'approvals'
+    ],
+    scope: 'BRANCH'
+  },
+  [Role.EMPLOYEE]: {
+    permissions: [
+      'students.view', 'students.create', 'students.edit',
+      'parents.view', 'parents.create',
+      'courses.view',
+      'attendance.view', 'attendance.create', 'attendance.scan_qr',
+      'exams.view',
+      'messages.view', 'messages.send',
+      'crm.manage'
+    ],
+    pages: [
+      'dashboard', 'students', 'parents', 'courses', 'groups', 'sessions',
+      'attendance', 'qr_scanner', 'messages', 'notifications', 'crm'
     ],
     scope: 'BRANCH'
   },
